@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import MemberSetup from "../components/MemberSetup";
 import TeamReview from "../components/TeamReview";
 import Workspace from "../components/Workspace";
+import AdminDashboard from "../components/AdminDashboard";
 import { Btn } from "../components/ui";
 import { autoFormTeams } from "../lib/teamFormation";
 
 export default function Home() {
   const [phase, setPhase] = useState(1);
+  const [view, setView] = useState("flow"); // flow | admin
   const [members, setMembers] = useState([]);
   const [teams, setTeams] = useState([]);
 
@@ -148,6 +150,13 @@ export default function Home() {
           <Btn variant="secondary" onClick={exportData} style={{ fontSize: 12 }}>
             Export JSON
           </Btn>
+          <Btn
+            variant={view === "admin" ? "accent" : "secondary"}
+            onClick={() => setView(view === "admin" ? "flow" : "admin")}
+            style={{ fontSize: 12 }}
+          >
+            {view === "admin" ? "Exit Admin" : "Admin"}
+          </Btn>
         </div>
       </header>
 
@@ -161,28 +170,38 @@ export default function Home() {
           width: "100%",
         }}
       >
-        {phase === 1 && (
-          <MemberSetup
-            members={members}
-            setMembers={setMembers}
-            onNext={handlePhase1Next}
-          />
-        )}
-        {phase === 2 && (
-          <TeamReview
+        {view === "admin" ? (
+          <AdminDashboard
             members={members}
             teams={teams}
-            setTeams={setTeams}
-            onNext={() => setPhase(3)}
-            onBack={() => setPhase(1)}
+            onBack={() => setView("flow")}
           />
-        )}
-        {phase === 3 && (
-          <Workspace
-            teams={teams}
-            setTeams={setTeams}
-            onBack={() => setPhase(2)}
-          />
+        ) : (
+          <>
+            {phase === 1 && (
+              <MemberSetup
+                members={members}
+                setMembers={setMembers}
+                onNext={handlePhase1Next}
+              />
+            )}
+            {phase === 2 && (
+              <TeamReview
+                members={members}
+                teams={teams}
+                setTeams={setTeams}
+                onNext={() => setPhase(3)}
+                onBack={() => setPhase(1)}
+              />
+            )}
+            {phase === 3 && (
+              <Workspace
+                teams={teams}
+                setTeams={setTeams}
+                onBack={() => setPhase(2)}
+              />
+            )}
+          </>
         )}
       </main>
 

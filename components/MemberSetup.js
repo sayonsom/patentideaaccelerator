@@ -6,18 +6,27 @@ import { INTEREST_CATEGORIES, ALL_INTERESTS } from "../lib/constants";
 
 export default function MemberSetup({ members, setMembers, onNext }) {
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [expandedCat, setExpandedCat] = useState(null);
   const [search, setSearch] = useState("");
 
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
   const addMember = () => {
-    if (!name.trim() || selectedInterests.length === 0) return;
+    if (!name.trim() || !emailOk || selectedInterests.length === 0) return;
     const uid = Math.random().toString(36).slice(2, 10);
     setMembers((prev) => [
       ...prev,
-      { id: uid, name: name.trim(), interests: [...selectedInterests] },
+      {
+        id: uid,
+        name: name.trim(),
+        email: email.trim(),
+        interests: [...selectedInterests],
+      },
     ]);
     setName("");
+    setEmail("");
     setSelectedInterests([]);
     setSearch("");
   };
@@ -66,8 +75,8 @@ export default function MemberSetup({ members, setMembers, onNext }) {
           Register Your Innovators
         </h2>
         <p style={{ color: "#64748b", marginTop: 8, fontSize: 14 }}>
-          Add everyone who'll participate. Tag their interests — we'll
-          auto-form diverse triangles.
+          Add everyone who'll participate (name + email). Tag their interests —
+          we'll auto-form diverse triangles.
         </p>
       </div>
 
@@ -80,13 +89,26 @@ export default function MemberSetup({ members, setMembers, onNext }) {
             onKeyDown={(e) => e.key === "Enter" && addMember()}
             style={{ flex: 1 }}
           />
+          <Input
+            value={email}
+            onChange={setEmail}
+            placeholder="Email address"
+            type="email"
+            onKeyDown={(e) => e.key === "Enter" && addMember()}
+            style={{ flex: 1 }}
+          />
           <Btn
             onClick={addMember}
-            disabled={!name.trim() || selectedInterests.length === 0}
+            disabled={!name.trim() || !emailOk || selectedInterests.length === 0}
           >
             + Add
           </Btn>
         </div>
+        {!!email.trim() && !emailOk && (
+          <div style={{ fontSize: 12, color: "#ef4444", marginBottom: 12 }}>
+            Please enter a valid email address.
+          </div>
+        )}
 
         {/* Selected preview */}
         {selectedInterests.length > 0 && (
@@ -226,6 +248,11 @@ export default function MemberSetup({ members, setMembers, onNext }) {
                   >
                     {m.name}
                   </span>
+                  {m.email && (
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                      {m.email}
+                    </div>
+                  )}
                   <div
                     style={{
                       display: "flex",

@@ -1,10 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge, Card, Btn, Input, TextArea, SectionLabel } from "./ui";
 import { TRIZPanel, SITPanel, CKPanel, PatentMatrix } from "./Frameworks";
 import { SPRINT_PHASES, SESSION_MODES, PATENT_MATRIX } from "../lib/constants";
 import { getTeamCategoryBreakdown } from "../lib/teamFormation";
+import {
+  ensureTimer,
+  formatDuration,
+  getRemainingSeconds,
+  getSpentSeconds,
+  pauseTimer,
+  resetTimer,
+  startTimer,
+} from "../lib/teamTimer";
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -143,37 +152,122 @@ function TeamWorkspace({ team, onUpdateTeam, onBack }) {
   const [newTitle, setNewTitle] = useState("");
   const [activePhase, setActivePhase] = useState("all");
   const [sortBy, setSortBy] = useState("created");
+  const [now, setNow] = useState(Date.now());
+  const [activeMemberId, setActiveMemberId] = useState(
+    team.dataMinister || team.members?.[0]?.id || null
+  );
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const timer = ensureTimer(team.timer);
+  const remainingSeconds = getRemainingSeconds(timer, now);
+  const spentSeconds = getSpentSeconds(timer, now);
+  const isRunning = !!timer.runningSinceMs && remainingSeconds > 0;
+  const currentStage = SPRINT_PHASES.find((p) => p.key === team.sprintPhase) || SPRINT_PHASES[0];
+  const startedStage = timer.startedStage
+    ? SPRINT_PHASES.find((p) => p.key === timer.startedStage) || null
+    : null;
+
+  useEffect(() => {
+    if (!timer.runningSinceMs) return;
+    if (remainingSeconds > 0) return;
+    onUpdateTeam({
+      ...team,
+      timer: pauseTimer(timer, { nowMs: now }),
+      lastActivityAt: Date.now(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remainingSeconds, now]);
 
   const addIdea = () => {
     if (!newTitle.trim()) return;
+    const nowMs = Date.now();
     onUpdateTeam({
       ...team,
+      lastActivityAt: nowMs,
       ideas: [...team.ideas, {
         id: uid(), title: newTitle.trim(), phase: "foundation",
         summary: "", problem: "", target: "", differentiator: "", notes: "",
         patentClaim: "", redTeamNotes: "",
         matrix: {}, triz_principles: [], sit: {},
         ck_concepts: "", ck_knowledge: "", ck_opportunity: "",
-        createdAt: Date.now(),
+        createdAt: nowMs,
+        createdBy: activeMemberId,
+        updatedAt: nowMs,
+        updatedBy: activeMemberId,
       }],
     });
     setNewTitle("");
   };
 
-  const updateIdea = (updated) => onUpdateTeam({ ...team, ideas: team.ideas.map((i) => (i.id === updated.id ? updated : i)) });
-  const deleteIdea = (id) => onUpdateTeam({ ...team, ideas: team.ideas.filter((i) => i.id !== id) });
-  const advanceIdea = (id) => onUpdateTeam({ ...team, ideas: team.ideas.map((i) => {
-    if (i.id !== id) return i;
-    const idx = SPRINT_PHASES.findIndex((p) => p.key === i.phase);
-    return idx < SPRINT_PHASES.length - 1 ? { ...i, phase: SPRINT_PHASES[idx + 1].key } : i;
-  })});
-  const retreatIdea = (id) => onUpdateTeam({ ...team, ideas: team.ideas.map((i) => {
-    if (i.id !== id) return i;
-    const idx = SPRINT_PHASES.findIndex((p) => p.key === i.phase);
-    return idx > 0 ? { ...i, phase: SPRINT_PHASES[idx - 1].key } : i;
-  })});
+  const updateIdea = (updated) => {
+    const nowMs = Date.now();
+    onUpdateTeam({
+      ...team,
+      lastActivityAt: nowMs,
+      ideas: team.ideas.map((i) => {
+        if (i.id !== updated.id) return i;
+        return {
+          ...i,
+          ...updated,
+          updatedAt: nowMs,
+          updatedBy: activeMemberId ?? i.updatedBy ?? null,
+          createdAt: i.createdAt ?? updated.createdAt ?? nowMs,
+          createdBy: i.createdBy ?? updated.createdBy ?? activeMemberId ?? null,
+        };
+      }),
+    });
+  };
+  const deleteIdea = (id) => {
+    const nowMs = Date.now();
+    onUpdateTeam({
+      ...team,
+      lastActivityAt: nowMs,
+      ideas: team.ideas.filter((i) => i.id !== id),
+    });
+  };
+  const advanceIdea = (id) => {
+    const nowMs = Date.now();
+    onUpdateTeam({
+      ...team,
+      lastActivityAt: nowMs,
+      ideas: team.ideas.map((i) => {
+        if (i.id !== id) return i;
+        const idx = SPRINT_PHASES.findIndex((p) => p.key === i.phase);
+        if (idx >= SPRINT_PHASES.length - 1) return i;
+        return {
+          ...i,
+          phase: SPRINT_PHASES[idx + 1].key,
+          updatedAt: nowMs,
+          updatedBy: activeMemberId ?? i.updatedBy ?? null,
+        };
+      }),
+    });
+  };
+  const retreatIdea = (id) => {
+    const nowMs = Date.now();
+    onUpdateTeam({
+      ...team,
+      lastActivityAt: nowMs,
+      ideas: team.ideas.map((i) => {
+        if (i.id !== id) return i;
+        const idx = SPRINT_PHASES.findIndex((p) => p.key === i.phase);
+        if (idx <= 0) return i;
+        return {
+          ...i,
+          phase: SPRINT_PHASES[idx - 1].key,
+          updatedAt: nowMs,
+          updatedBy: activeMemberId ?? i.updatedBy ?? null,
+        };
+      }),
+    });
+  };
 
-  const setSessionMode = (mode) => onUpdateTeam({ ...team, sessionMode: mode });
+  const setSessionMode = (mode) =>
+    onUpdateTeam({ ...team, sessionMode: mode, lastActivityAt: Date.now() });
   const currentMode = SESSION_MODES.find((m) => m.key === team.sessionMode) || SESSION_MODES[0];
   const dm = team.members.find((m) => m.id === team.dataMinister);
 
@@ -208,6 +302,131 @@ function TeamWorkspace({ team, onUpdateTeam, onBack }) {
             {dm && <span> · 📊 DM: {dm.name}</span>}
             {" · "}{team.ideas.length} concept{team.ideas.length !== 1 ? "s" : ""}
           </p>
+          <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" }}>
+              Contributor
+            </div>
+            <select
+              value={activeMemberId || ""}
+              onChange={(e) => setActiveMemberId(e.target.value || null)}
+              style={{
+                background: "#1e293b",
+                border: "1px solid #334155",
+                borderRadius: 8,
+                padding: "8px 12px",
+                color: "#e2e8f0",
+                fontSize: 13,
+                outline: "none",
+              }}
+            >
+              <option value="">Unassigned</option>
+              {team.members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+            <span style={{ fontSize: 12, color: "#475569" }}>
+              Attribution for new ideas/edits
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Stage + timer */}
+      <div style={{ background: "#0b1120", borderRadius: 10, padding: 14, border: "1px solid #1e293b", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
+          <SectionLabel>Team Stage · 72h Timer</SectionLabel>
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            {SPRINT_PHASES.map((p) => (
+              <div key={p.key} onClick={() => onUpdateTeam({ ...team, sprintPhase: p.key, lastActivityAt: Date.now() })} style={{
+                padding: "6px 14px", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 700,
+                background: team.sprintPhase === p.key ? p.color + "20" : "#1e293b",
+                border: `1px solid ${team.sprintPhase === p.key ? p.color : "#334155"}`,
+                color: team.sprintPhase === p.key ? p.color : "#64748b",
+                transition: "all 0.15s",
+              }}>{p.icon} {p.label}</div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }} className="grid-responsive-3">
+          <div style={{ background: "#1e293b", borderRadius: 8, padding: "10px 14px", textAlign: "center", borderTop: `3px solid ${remainingSeconds > 0 ? "#10b981" : "#ef4444"}` }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#f8fafc", fontFamily: "var(--font-mono)" }}>{formatDuration(remainingSeconds)}</div>
+            <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600 }}>REMAINING</div>
+          </div>
+          <div style={{ background: "#1e293b", borderRadius: 8, padding: "10px 14px", textAlign: "center", borderTop: "3px solid #3b82f6" }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#f8fafc", fontFamily: "var(--font-mono)" }}>{formatDuration(spentSeconds)}</div>
+            <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600 }}>SPENT</div>
+          </div>
+          <div style={{ background: "#1e293b", borderRadius: 8, padding: "10px 14px", textAlign: "center", borderTop: `3px solid ${isRunning ? "#f59e0b" : remainingSeconds === 0 && timer.startedAtMs ? "#ef4444" : "#475569"}` }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: isRunning ? "#f59e0b" : remainingSeconds === 0 && timer.startedAtMs ? "#ef4444" : "#94a3b8" }}>
+              {isRunning ? "RUNNING" : remainingSeconds === 0 && timer.startedAtMs ? "EXPIRED" : timer.startedAtMs ? "PAUSED" : "NOT STARTED"}
+            </div>
+            <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600, marginTop: 4 }}>
+              Stage: <span style={{ color: currentStage.color, fontWeight: 800 }}>{currentStage.label}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ fontSize: 12, color: "#64748b" }}>
+            {timer.startedAtMs ? (
+              <>
+                Started {startedStage ? `(${startedStage.label}) ` : ""}on{" "}
+                <span style={{ color: "#94a3b8", fontWeight: 700 }}>{new Date(timer.startedAtMs).toLocaleString()}</span>
+              </>
+            ) : (
+              <>Click <strong style={{ color: "#f59e0b" }}>Start</strong> when your team begins the{" "}
+              <span style={{ color: currentStage.color, fontWeight: 800 }}>{currentStage.label}</span> stage.</>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {!isRunning ? (
+              <Btn
+                variant="green"
+                disabled={remainingSeconds === 0}
+                onClick={() =>
+                  onUpdateTeam({
+                    ...team,
+                    timer: startTimer(timer, { stage: team.sprintPhase }),
+                    lastActivityAt: Date.now(),
+                  })
+                }
+              >
+                ▶ Start
+              </Btn>
+            ) : (
+              <Btn
+                variant="secondary"
+                onClick={() =>
+                  onUpdateTeam({
+                    ...team,
+                    timer: pauseTimer(timer),
+                    lastActivityAt: Date.now(),
+                  })
+                }
+              >
+                ❚❚ Pause
+              </Btn>
+            )}
+            {timer.startedAtMs && (
+              <Btn
+                variant="ghost"
+                onClick={() => {
+                  if (!confirm("Reset this team's timer back to 72 hours?")) return;
+                  onUpdateTeam({
+                    ...team,
+                    timer: resetTimer(timer),
+                    lastActivityAt: Date.now(),
+                  });
+                }}
+                style={{ fontSize: 12 }}
+              >
+                Reset
+              </Btn>
+            )}
+          </div>
         </div>
       </div>
 

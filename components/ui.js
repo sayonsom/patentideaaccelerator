@@ -83,9 +83,10 @@ export function Btn({ children, onClick, variant = "primary", style, disabled })
   );
 }
 
-export function Input({ value, onChange, placeholder, onKeyDown, style }) {
+export function Input({ value, onChange, placeholder, onKeyDown, style, type = "text" }) {
   return (
     <input
+      type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
