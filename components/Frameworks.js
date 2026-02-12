@@ -6,7 +6,7 @@ import { TRIZ_PRINCIPLES, SIT_TEMPLATES, CK_PROMPTS, PATENT_MATRIX } from "../li
 // ═══════════════════════════════════════════════════════════════════
 // TRIZ Panel
 // ═══════════════════════════════════════════════════════════════════
-export function TRIZPanel({ idea, onUpdate }) {
+export function TRIZPanel({ idea, onUpdate, renderAIBtn }) {
   return (
     <div style={{ background: "#0b1120", borderRadius: 10, padding: 16, border: "1px solid #1e293b", marginBottom: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -16,11 +16,17 @@ export function TRIZPanel({ idea, onUpdate }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }} className="grid-responsive-2">
         <div>
-          <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginBottom: 4 }}>IMPROVING PARAMETER</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
+            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>IMPROVING PARAMETER</div>
+            {renderAIBtn?.({ framework: "triz", fieldKey: "triz_improving" })}
+          </div>
           <Input value={idea.triz_improving || ""} onChange={(v) => onUpdate({ ...idea, triz_improving: v })} placeholder="e.g. Energy Efficiency, Speed, Accuracy" />
         </div>
         <div>
-          <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginBottom: 4 }}>WORSENING PARAMETER</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
+            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>WORSENING PARAMETER</div>
+            {renderAIBtn?.({ framework: "triz", fieldKey: "triz_worsening" })}
+          </div>
           <Input value={idea.triz_worsening || ""} onChange={(v) => onUpdate({ ...idea, triz_worsening: v })} placeholder="e.g. User Comfort, Battery Life, Latency" />
         </div>
       </div>
@@ -68,7 +74,10 @@ export function TRIZPanel({ idea, onUpdate }) {
         </div>
       )}
 
-      <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginBottom: 4 }}>RESOLUTION NOTES</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
+        <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>RESOLUTION NOTES</div>
+        {renderAIBtn?.({ framework: "triz", fieldKey: "triz_resolution" })}
+      </div>
       <TextArea value={idea.triz_resolution || ""} onChange={(v) => onUpdate({ ...idea, triz_resolution: v })}
         placeholder="How do the selected principles resolve the contradiction? What technical mechanism bridges improving vs. worsening?" rows={3} />
     </div>
@@ -78,7 +87,7 @@ export function TRIZPanel({ idea, onUpdate }) {
 // ═══════════════════════════════════════════════════════════════════
 // SIT Panel
 // ═══════════════════════════════════════════════════════════════════
-export function SITPanel({ idea, onUpdate }) {
+export function SITPanel({ idea, onUpdate, renderAIBtn }) {
   return (
     <div style={{ background: "#0b1120", borderRadius: 10, padding: 16, border: "1px solid #1e293b", marginBottom: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -90,9 +99,12 @@ export function SITPanel({ idea, onUpdate }) {
           const val = idea.sit?.[t.id] || "";
           return (
             <div key={t.id} style={{ background: "#1e293b", borderRadius: 8, padding: "10px 12px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                <span>{t.icon}</span>
-                <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>{t.name}</span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>{t.icon}</span>
+                  <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>{t.name}</span>
+                </div>
+                {renderAIBtn?.({ framework: "sit", fieldKey: "sit", templateId: t.id })}
               </div>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4, fontStyle: "italic" }}>{t.prompt}</div>
               <div style={{ fontSize: 10, color: "#475569", marginBottom: 6 }}>Example: {t.example}</div>
@@ -109,7 +121,7 @@ export function SITPanel({ idea, onUpdate }) {
 // ═══════════════════════════════════════════════════════════════════
 // C-K Theory Panel
 // ═══════════════════════════════════════════════════════════════════
-export function CKPanel({ idea, onUpdate }) {
+export function CKPanel({ idea, onUpdate, renderAIBtn }) {
   return (
     <div style={{ background: "#0b1120", borderRadius: 10, padding: 16, border: "1px solid #1e293b", marginBottom: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -118,19 +130,28 @@ export function CKPanel({ idea, onUpdate }) {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="grid-responsive-2">
         <div>
-          <div style={{ fontSize: 11, color: "#ec4899", fontWeight: 600, marginBottom: 4 }}>CONCEPT SPACE (C)</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
+            <div style={{ fontSize: 11, color: "#ec4899", fontWeight: 600 }}>CONCEPT SPACE (C)</div>
+            {renderAIBtn?.({ framework: "ck", fieldKey: "ck_concepts" })}
+          </div>
           <div style={{ fontSize: 10, color: "#64748b", marginBottom: 4 }}>{CK_PROMPTS.concept}</div>
           <TextArea value={idea.ck_concepts || ""} onChange={(v) => onUpdate({ ...idea, ck_concepts: v })}
             placeholder="Ideas we cannot yet prove true or false…" rows={4} />
         </div>
         <div>
-          <div style={{ fontSize: 11, color: "#3b82f6", fontWeight: 600, marginBottom: 4 }}>KNOWLEDGE SPACE (K)</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
+            <div style={{ fontSize: 11, color: "#3b82f6", fontWeight: 600 }}>KNOWLEDGE SPACE (K)</div>
+            {renderAIBtn?.({ framework: "ck", fieldKey: "ck_knowledge" })}
+          </div>
           <div style={{ fontSize: 10, color: "#64748b", marginBottom: 4 }}>{CK_PROMPTS.knowledge}</div>
           <TextArea value={idea.ck_knowledge || ""} onChange={(v) => onUpdate({ ...idea, ck_knowledge: v })}
             placeholder={"✅ Proven: …\n🟡 Emerging: …\n❌ Gap: …"} rows={4} />
         </div>
       </div>
-      <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginBottom: 4 }}>PATENT OPPORTUNITY (C↔K boundary)</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
+        <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>PATENT OPPORTUNITY (C↔K boundary)</div>
+        {renderAIBtn?.({ framework: "ck", fieldKey: "ck_opportunity" })}
+      </div>
       <div style={{ fontSize: 10, color: "#64748b", marginBottom: 4 }}>{CK_PROMPTS.expansion}</div>
       <TextArea value={idea.ck_opportunity || ""} onChange={(v) => onUpdate({ ...idea, ck_opportunity: v })}
         placeholder="Knowledge gaps that, if filled, create novel IP…" rows={2} />

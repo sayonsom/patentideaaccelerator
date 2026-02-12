@@ -1,18 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MemberSetup from "../components/MemberSetup";
 import TeamReview from "../components/TeamReview";
 import Workspace from "../components/Workspace";
 import AdminDashboard from "../components/AdminDashboard";
+import Settings, { loadOpenAIApiKey } from "../components/Settings";
 import { Btn } from "../components/ui";
 import { autoFormTeams } from "../lib/teamFormation";
 
 export default function Home() {
   const [phase, setPhase] = useState(1);
-  const [view, setView] = useState("flow"); // flow | admin
+  const [view, setView] = useState("flow"); // flow | admin | settings
   const [members, setMembers] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [openAIApiKey, setOpenAIApiKey] = useState("");
+
+  useEffect(() => {
+    setOpenAIApiKey(loadOpenAIApiKey());
+  }, []);
 
   // Auto-form teams when transitioning from phase 1 → 2
   const handlePhase1Next = () => {
@@ -157,6 +163,13 @@ export default function Home() {
           >
             {view === "admin" ? "Exit Admin" : "Admin"}
           </Btn>
+          <Btn
+            variant={view === "settings" ? "accent" : "secondary"}
+            onClick={() => setView(view === "settings" ? "flow" : "settings")}
+            style={{ fontSize: 12 }}
+          >
+            {view === "settings" ? "Exit Settings" : "Settings"}
+          </Btn>
         </div>
       </header>
 
@@ -175,6 +188,12 @@ export default function Home() {
             members={members}
             teams={teams}
             onBack={() => setView("flow")}
+          />
+        ) : view === "settings" ? (
+          <Settings
+            onBack={() => setView("flow")}
+            openAIApiKey={openAIApiKey}
+            setOpenAIApiKey={setOpenAIApiKey}
           />
         ) : (
           <>
@@ -199,6 +218,7 @@ export default function Home() {
                 teams={teams}
                 setTeams={setTeams}
                 onBack={() => setPhase(2)}
+                openAIApiKey={openAIApiKey}
               />
             )}
           </>

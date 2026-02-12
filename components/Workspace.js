@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Badge, Card, Btn, Input, TextArea, SectionLabel } from "./ui";
+import { Badge, Card, Btn, Input, TextArea, SectionLabel, Modal } from "./ui";
 import { TRIZPanel, SITPanel, CKPanel, PatentMatrix } from "./Frameworks";
 import { SPRINT_PHASES, SESSION_MODES, PATENT_MATRIX } from "../lib/constants";
 import { getTeamCategoryBreakdown } from "../lib/teamFormation";
@@ -20,12 +20,190 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 // ═══════════════════════════════════════════════════════════════════
 // Idea Card
 // ═══════════════════════════════════════════════════════════════════
-function IdeaCard({ idea, onUpdate, onDelete, onAdvance, onRetreat }) {
+function IdeaCard({
+  idea,
+  onUpdate,
+  onDelete,
+  onAdvance,
+  onRetreat,
+  openAIApiKey,
+  teamSprintPhase,
+}) {
   const [expanded, setExpanded] = useState(false);
   const [activeFramework, setActiveFramework] = useState(null);
+  const [aiBusyKey, setAiBusyKey] = useState(null);
+  const [aiError, setAiError] = useState("");
+  const [patentsOpen, setPatentsOpen] = useState(false);
+  const [patentsLoading, setPatentsLoading] = useState(false);
+  const [patentsError, setPatentsError] = useState("");
+  const [patentsQuery, setPatentsQuery] = useState("");
+  const [patentsTotal, setPatentsTotal] = useState(0);
+  const [patentsResults, setPatentsResults] = useState([]);
   const phase = SPRINT_PHASES.find((p) => p.key === idea.phase) || SPRINT_PHASES[0];
   const matrixTotal = (idea.matrix?.inventive_step || 0) + (idea.matrix?.defensibility || 0) + (idea.matrix?.product_fit || 0);
   const phaseIdx = SPRINT_PHASES.findIndex((p) => p.key === idea.phase);
+
+  const aiEnabled = !!openAIApiKey?.trim();
+  const aiDisabledTip = "Enter OpenAI API Key in Settings to enable this";
+
+  const fieldLabelRow = (label, right) => (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 10,
+        marginBottom: 8,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          color: "#64748b",
+          fontWeight: 700,
+          letterSpacing: 1.5,
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </div>
+      {right}
+    </div>
+  );
+
+  const buildAIKey = ({ framework, fieldKey, templateId }) =>
+    `${framework}:${fieldKey}:${templateId || ""}`;
+
+  const applyGeneratedText = ({ framework, fieldKey, templateId, text }) => {
+    if (!text) return;
+    if (framework === "sit") {
+      onUpdate({
+        ...idea,
+        sit: { ...(idea.sit || {}), [templateId]: text },
+      });
+      return;
+    }
+    onUpdate({
+      ...idea,
+      [fieldKey]: text,
+    });
+  };
+
+  const generateWithAI = async ({ framework, fieldKey, templateId = null }) => {
+    if (!aiEnabled) return;
+    const key = buildAIKey({ framework, fieldKey, templateId });
+    setAiError("");
+    setAiBusyKey(key);
+    try {
+      const res = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-openai-key": openAIApiKey,
+        },
+        body: JSON.stringify({
+          framework,
+          fieldKey,
+          templateId,
+          teamSprintPhase: teamSprintPhase || null,
+          idea,
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        const msg = data?.error || "AI generation failed";
+        throw new Error(msg);
+      }
+      applyGeneratedText({
+        framework,
+        fieldKey,
+        templateId,
+        text: data?.text || "",
+      });
+    } catch (e) {
+      setAiError(e?.message || "AI generation failed");
+    } finally {
+      setAiBusyKey(null);
+    }
+  };
+
+  const renderAIBtn = ({ framework, fieldKey, templateId = null }) => {
+    const key = buildAIKey({ framework, fieldKey, templateId });
+    const busy = aiBusyKey === key;
+    const disabled = !aiEnabled || busy;
+    const title = !aiEnabled ? aiDisabledTip : "Generate with AI";
+    return (
+      <span title={title} style={{ display: "inline-block" }}>
+        <Btn
+          variant="secondary"
+          disabled={disabled}
+          onClick={() => generateWithAI({ framework, fieldKey, templateId })}
+          style={{ fontSize: 12, padding: "6px 12px" }}
+        >
+          {busy ? "Generating…" : "Generate with AI"}
+        </Btn>
+      </span>
+    );
+  };
+
+  const buildPatentQuery = () => {
+    const parts = [
+      idea?.title,
+      idea?.keywords,
+      idea?.summary,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return parts;
+  };
+
+  const openPatentSearch = async () => {
+    const q = buildPatentQuery();
+    if (!q) return;
+    setPatentsOpen(true);
+    setPatentsQuery(q);
+    setPatentsLoading(true);
+    setPatentsError("");
+    try {
+      const res = await fetch(`/api/patents/search?q=${encodeURIComponent(q)}`);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        const msg = data?.error || "Patent search failed";
+        throw new Error(msg);
+      }
+      setPatentsResults(data?.results || []);
+      setPatentsTotal(data?.total || 0);
+    } catch (e) {
+      setPatentsResults([]);
+      setPatentsTotal(0);
+      setPatentsError(e?.message || "Patent search failed");
+    } finally {
+      setPatentsLoading(false);
+    }
+  };
+
+  const renderPatentSearchBtn = () => {
+    const q = buildPatentQuery();
+    const ready = !!q;
+    const title = ready
+      ? "Search Google Patents"
+      : "Add a title, keywords, or summary to enable patent search";
+    return (
+      <span title={title} style={{ display: "inline-block" }}>
+        <Btn
+          variant="secondary"
+          disabled={!ready || patentsLoading}
+          onClick={openPatentSearch}
+          style={{ fontSize: 12, padding: "6px 12px" }}
+        >
+          {patentsLoading ? "Searching…" : "Google Patents"}
+        </Btn>
+      </span>
+    );
+  };
 
   return (
     <Card style={{ borderLeft: `3px solid ${phase.color}`, marginBottom: 10 }}>
@@ -59,29 +237,39 @@ function IdeaCard({ idea, onUpdate, onDelete, onAdvance, onRetreat }) {
       {/* Expanded content */}
       {expanded && (
         <div style={{ marginTop: 16, borderTop: "1px solid #1e293b", paddingTop: 16 }} className="slide-up">
+          {aiError && (
+            <div style={{ color: "#ef4444", fontSize: 12, marginBottom: 12 }}>
+              {aiError}
+            </div>
+          )}
+
           {/* Core fields */}
           <div style={{ display: "grid", gap: 12, marginBottom: 16 }}>
             <div>
-              <SectionLabel>Title</SectionLabel>
+              {fieldLabelRow("Title", renderAIBtn({ framework: "core", fieldKey: "title" }))}
               <Input value={idea.title} onChange={(v) => onUpdate({ ...idea, title: v })} />
             </div>
             <div>
-              <SectionLabel>One-line Summary</SectionLabel>
+              {fieldLabelRow("One-line Summary", renderAIBtn({ framework: "core", fieldKey: "summary" }))}
               <TextArea value={idea.summary || ""} onChange={(v) => onUpdate({ ...idea, summary: v })} placeholder="The elevator pitch…" rows={2} />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }} className="grid-responsive-2">
               <div>
-                <SectionLabel>Problem Statement</SectionLabel>
+                {fieldLabelRow("Problem Statement", renderAIBtn({ framework: "core", fieldKey: "problem" }))}
                 <TextArea value={idea.problem || ""} onChange={(v) => onUpdate({ ...idea, problem: v })} placeholder="What contradiction or gap does this solve?" rows={2} />
               </div>
               <div>
-                <SectionLabel>Target User / Market</SectionLabel>
+                {fieldLabelRow("Target User / Market", renderAIBtn({ framework: "core", fieldKey: "target" }))}
                 <TextArea value={idea.target || ""} onChange={(v) => onUpdate({ ...idea, target: v })} placeholder="Who benefits?" rows={2} />
               </div>
             </div>
             <div>
-              <SectionLabel>Key Differentiator</SectionLabel>
+              {fieldLabelRow("Key Differentiator", renderAIBtn({ framework: "core", fieldKey: "differentiator" }))}
               <TextArea value={idea.differentiator || ""} onChange={(v) => onUpdate({ ...idea, differentiator: v })} placeholder="What's novel? What prior art exists and how is this different?" rows={2} />
+            </div>
+            <div>
+              {fieldLabelRow("Keywords", renderAIBtn({ framework: "core", fieldKey: "keywords" }))}
+              <Input value={idea.keywords || ""} onChange={(v) => onUpdate({ ...idea, keywords: v })} placeholder="Comma-separated keywords (used for AI + patent search)" />
             </div>
           </div>
 
@@ -100,12 +288,12 @@ function IdeaCard({ idea, onUpdate, onDelete, onAdvance, onRetreat }) {
               >{fw.label}</Btn>
             ))}
           </div>
-          {activeFramework === "triz" && <TRIZPanel idea={idea} onUpdate={onUpdate} />}
-          {activeFramework === "sit" && <SITPanel idea={idea} onUpdate={onUpdate} />}
-          {activeFramework === "ck" && <CKPanel idea={idea} onUpdate={onUpdate} />}
+          {activeFramework === "triz" && <TRIZPanel idea={idea} onUpdate={onUpdate} renderAIBtn={renderAIBtn} />}
+          {activeFramework === "sit" && <SITPanel idea={idea} onUpdate={onUpdate} renderAIBtn={renderAIBtn} />}
+          {activeFramework === "ck" && <CKPanel idea={idea} onUpdate={onUpdate} renderAIBtn={renderAIBtn} />}
 
           {/* Patent Claim */}
-          <SectionLabel>Patent Claim Draft</SectionLabel>
+          {fieldLabelRow("Patent Claim Draft", renderAIBtn({ framework: "core", fieldKey: "patentClaim" }))}
           <div style={{ background: "#0b1120", borderRadius: 10, padding: 14, border: "1px solid #1e293b", marginBottom: 10, fontSize: 11, color: "#475569", fontStyle: "italic", lineHeight: 1.5 }}>
             Template: A [method/system/device] for [FUNCTION] comprising: [first element addressing contradiction]; [second element enabling solution]; wherein [contradiction is resolved by…]; characterized by [novel aspect not in prior art].
           </div>
@@ -119,17 +307,120 @@ function IdeaCard({ idea, onUpdate, onDelete, onAdvance, onRetreat }) {
 
           {/* Red Team */}
           <div style={{ marginTop: 14 }}>
-            <SectionLabel>💀 Red Team / Destroy Notes</SectionLabel>
+            {fieldLabelRow("💀 Red Team / Destroy Notes", renderAIBtn({ framework: "core", fieldKey: "redTeamNotes" }))}
             <TextArea value={idea.redTeamNotes || ""} onChange={(v) => onUpdate({ ...idea, redTeamNotes: v })}
               placeholder={'"This will fail because…" — capture all attacks and weaknesses here'} rows={3} />
           </div>
 
           {/* Notes */}
           <div style={{ marginTop: 14 }}>
-            <SectionLabel>Free-form Notes & Prior Art</SectionLabel>
+            {fieldLabelRow(
+              "Free-form Notes & Prior Art",
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {renderAIBtn({ framework: "core", fieldKey: "notes" })}
+                {renderPatentSearchBtn()}
+              </div>
+            )}
             <TextArea value={idea.notes || ""} onChange={(v) => onUpdate({ ...idea, notes: v })}
               placeholder="Links, references, market data, prior art search results…" rows={3} />
           </div>
+
+          {/* Google Patents Modal */}
+          <Modal
+            open={patentsOpen}
+            title="Google Patents Search"
+            onClose={() => {
+              setPatentsOpen(false);
+              setPatentsError("");
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+              <div style={{ minWidth: 260, flex: 1 }}>
+                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>
+                  Query
+                </div>
+                <div style={{ color: "#e2e8f0", fontSize: 13, fontFamily: "var(--font-mono)", lineHeight: 1.4 }}>
+                  {patentsQuery || "—"}
+                </div>
+                <div style={{ marginTop: 6, fontSize: 12, color: "#64748b" }}>
+                  {patentsTotal ? `${patentsTotal.toLocaleString()} results (showing top ${patentsResults.length})` : ""}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <a
+                  href={patentsQuery ? `https://patents.google.com/?q=${encodeURIComponent(patentsQuery)}` : "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ textDecoration: "none" }}
+                >
+                  <Btn variant="accent" disabled={!patentsQuery} style={{ fontSize: 12 }}>
+                    Open Full Results ↗
+                  </Btn>
+                </a>
+                <Btn variant="secondary" onClick={openPatentSearch} disabled={!patentsQuery || patentsLoading} style={{ fontSize: 12 }}>
+                  Refresh
+                </Btn>
+              </div>
+            </div>
+
+            {patentsError && (
+              <div style={{ color: "#ef4444", fontSize: 12, marginBottom: 12 }}>
+                {patentsError}
+              </div>
+            )}
+
+            {patentsLoading ? (
+              <div style={{ color: "#94a3b8", fontSize: 13 }}>
+                Searching Google Patents…
+              </div>
+            ) : patentsResults.length === 0 ? (
+              <div style={{ color: "#475569", fontSize: 13 }}>
+                No results yet. Try adding keywords, then click Refresh.
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {patentsResults.map((r) => (
+                  <div key={r.id || r.url} style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 12, padding: "12px 14px" }}>
+                    <a
+                      href={r.url || "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ color: "#f8fafc", fontWeight: 800, fontSize: 14, textDecoration: "none" }}
+                    >
+                      {r.title || r.publicationNumber || r.id}
+                    </a>
+                    {r.snippet && (
+                      <div style={{ marginTop: 6, color: "#94a3b8", fontSize: 12, lineHeight: 1.5 }}>
+                        {r.snippet}
+                      </div>
+                    )}
+                    <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11, color: "#64748b" }}>
+                      {r.publicationNumber && <span>{r.publicationNumber}</span>}
+                      {r.assignee && <span>Assignee: {r.assignee}</span>}
+                      {r.filingDate && <span>Filing: {r.filingDate}</span>}
+                      {r.publicationDate && <span>Pub: {r.publicationDate}</span>}
+                    </div>
+                    {r.pdf && (
+                      <div style={{ marginTop: 10 }}>
+                        <a
+                          href={`https://patentimages.storage.googleapis.com/${r.pdf}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ color: "#3b82f6", fontSize: 12, fontWeight: 700, textDecoration: "none" }}
+                        >
+                          PDF ↗
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ marginTop: 14, fontSize: 11, color: "#475569" }}>
+              Results are fetched from Google Patents and may be rate-limited.
+            </div>
+          </Modal>
 
           {/* Phase navigation */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, paddingTop: 16, borderTop: "1px solid #1e293b" }}>
@@ -148,7 +439,7 @@ function IdeaCard({ idea, onUpdate, onDelete, onAdvance, onRetreat }) {
 // ═══════════════════════════════════════════════════════════════════
 // Team Workspace
 // ═══════════════════════════════════════════════════════════════════
-function TeamWorkspace({ team, onUpdateTeam, onBack }) {
+function TeamWorkspace({ team, onUpdateTeam, onBack, openAIApiKey }) {
   const [newTitle, setNewTitle] = useState("");
   const [activePhase, setActivePhase] = useState("all");
   const [sortBy, setSortBy] = useState("created");
@@ -190,7 +481,7 @@ function TeamWorkspace({ team, onUpdateTeam, onBack }) {
       lastActivityAt: nowMs,
       ideas: [...team.ideas, {
         id: uid(), title: newTitle.trim(), phase: "foundation",
-        summary: "", problem: "", target: "", differentiator: "", notes: "",
+        keywords: "", summary: "", problem: "", target: "", differentiator: "", notes: "",
         patentClaim: "", redTeamNotes: "",
         matrix: {}, triz_principles: [], sit: {},
         ck_concepts: "", ck_knowledge: "", ck_opportunity: "",
@@ -507,7 +798,16 @@ function TeamWorkspace({ team, onUpdateTeam, onBack }) {
         </div>
       ) : (
         sorted.map((idea) => (
-          <IdeaCard key={idea.id} idea={idea} onUpdate={updateIdea} onDelete={deleteIdea} onAdvance={advanceIdea} onRetreat={retreatIdea} />
+          <IdeaCard
+            key={idea.id}
+            idea={idea}
+            onUpdate={updateIdea}
+            onDelete={deleteIdea}
+            onAdvance={advanceIdea}
+            onRetreat={retreatIdea}
+            openAIApiKey={openAIApiKey}
+            teamSprintPhase={team.sprintPhase}
+          />
         ))
       )}
 
@@ -556,7 +856,7 @@ function TeamWorkspace({ team, onUpdateTeam, onBack }) {
 // ═══════════════════════════════════════════════════════════════════
 // Workspace Hub (team selector → team workspace)
 // ═══════════════════════════════════════════════════════════════════
-export default function Workspace({ teams, setTeams, onBack }) {
+export default function Workspace({ teams, setTeams, onBack, openAIApiKey }) {
   const [activeTeamId, setActiveTeamId] = useState(null);
   const activeTeam = teams.find((t) => t.id === activeTeamId);
 
@@ -566,6 +866,7 @@ export default function Workspace({ teams, setTeams, onBack }) {
         team={activeTeam}
         onUpdateTeam={(updated) => setTeams((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))}
         onBack={() => setActiveTeamId(null)}
+        openAIApiKey={openAIApiKey}
       />
     );
   }

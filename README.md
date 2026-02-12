@@ -34,6 +34,8 @@ Each triangle gets a full ideation pipeline with:
 - **Session Modes**: Quantity (50+ ideas, no criticism) → Quality (3×3 scoring) → Destroy (Red Team attacks)
 - **Sprint Phases**: Foundation (20 concepts) → Validation (10 ideas) → Filing (5 patents)
 - **72h Team Timer**: Start/pause a 72-hour time budget per team (counts down once started)
+- **AI Assist (Optional)**: "Generate with AI" buttons for idea fields + TRIZ/SIT/C-K worksheets (requires OpenAI API key in Settings)
+- **Google Patents Search**: One-click patent search shown in a modal (links open in new tabs)
 - **TRIZ Worksheet**: Improving/worsening parameters, 40 inventive principles, resolution notes
 - **SIT Worksheet**: All 5 templates (Subtraction, Division, Multiplication, Task Unification, Attribute Dependency)
 - **C-K Theory Worksheet**: Concept space / Knowledge space mapping, patent opportunity identification

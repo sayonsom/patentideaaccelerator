@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function Badge({ children, color = "#64748b", onClick, removable, active }) {
   return (
@@ -143,6 +143,75 @@ export function SectionLabel({ children }) {
       }}
     >
       {children}
+    </div>
+  );
+}
+
+export function Modal({ open, title, onClose, children, width = 860 }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose?.();
+      }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(2,6,23,0.72)",
+        backdropFilter: "blur(6px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+        zIndex: 2000,
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: width,
+          background: "#0b1120",
+          border: "1px solid #1e293b",
+          borderRadius: 14,
+          overflow: "hidden",
+          boxShadow: "0 18px 60px rgba(0,0,0,0.55)",
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            padding: "14px 16px",
+            borderBottom: "1px solid #1e293b",
+            background: "#020617ee",
+          }}
+        >
+          <div style={{ color: "#f8fafc", fontWeight: 800, fontSize: 14 }}>
+            {title}
+          </div>
+          <Btn variant="ghost" onClick={onClose} style={{ fontSize: 18, padding: "4px 10px" }}>
+            ×
+          </Btn>
+        </div>
+        <div style={{ padding: 16, maxHeight: "75vh", overflow: "auto" }}>
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
