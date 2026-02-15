@@ -6,12 +6,13 @@
  * function bodies in this single file.
  */
 
-import type { Idea, Sprint, User, IdeaStatus } from "./types";
+import type { Idea, Sprint, Team, User, IdeaStatus } from "./types";
 
 const STORAGE_KEYS = {
   ideas: "voltedge:ideas",
   user: "voltedge:user",
   sprints: "voltedge:sprints",
+  teams: "voltedge:teams",
 } as const;
 
 function readJSON<T>(key: string, fallback: T): T {
@@ -138,5 +139,39 @@ export function deleteSprint(id: string): boolean {
   const filtered = sprints.filter((s) => s.id !== id);
   if (filtered.length === sprints.length) return false;
   writeJSON(STORAGE_KEYS.sprints, filtered);
+  return true;
+}
+
+// ─── Teams (Sprint Workspaces with full data) ────────────────────
+
+export function listTeams(): Team[] {
+  return readJSON<Team[]>(STORAGE_KEYS.teams, []);
+}
+
+export function getTeam(id: string): Team | undefined {
+  return listTeams().find((t) => t.id === id);
+}
+
+export function createTeam(team: Team): Team {
+  const teams = listTeams();
+  teams.unshift(team);
+  writeJSON(STORAGE_KEYS.teams, teams);
+  return team;
+}
+
+export function updateTeam(id: string, updates: Partial<Team>): Team | undefined {
+  const teams = listTeams();
+  const idx = teams.findIndex((t) => t.id === id);
+  if (idx === -1) return undefined;
+  teams[idx] = { ...teams[idx], ...updates };
+  writeJSON(STORAGE_KEYS.teams, teams);
+  return teams[idx];
+}
+
+export function deleteTeam(id: string): boolean {
+  const teams = listTeams();
+  const filtered = teams.filter((t) => t.id !== id);
+  if (filtered.length === teams.length) return false;
+  writeJSON(STORAGE_KEYS.teams, filtered);
   return true;
 }

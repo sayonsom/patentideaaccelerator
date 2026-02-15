@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { Idea, IdeaStatus, User } from "./types";
+import type { Idea, IdeaStatus, Team, User } from "./types";
 import * as api from "./api";
 import { createBlankIdea, uid } from "./utils";
 
@@ -160,4 +160,48 @@ export const useUIStore = create<UIState>((set) => ({
   openModal: (id) => set({ activeModal: id }),
   closeModal: () => set({ activeModal: null }),
   setWizardStep: (step) => set({ wizardStep: step }),
+}));
+
+// ─── Team Store (Sprint Workspaces) ──────────────────────────────
+
+interface TeamState {
+  teams: Team[];
+  loading: boolean;
+
+  loadTeams: () => void;
+  addTeam: (team: Team) => void;
+  updateTeam: (id: string, updates: Partial<Team>) => void;
+  removeTeam: (id: string) => void;
+  getTeam: (id: string) => Team | undefined;
+}
+
+export const useTeamStore = create<TeamState>((set, get) => ({
+  teams: [],
+  loading: false,
+
+  loadTeams: () => {
+    set({ loading: true });
+    const teams = api.listTeams();
+    set({ teams, loading: false });
+  },
+
+  addTeam: (team) => {
+    api.createTeam(team);
+    set((s) => ({ teams: [team, ...s.teams] }));
+  },
+
+  updateTeam: (id, updates) => {
+    const updated = api.updateTeam(id, updates);
+    if (!updated) return;
+    set((s) => ({
+      teams: s.teams.map((t) => (t.id === id ? updated : t)),
+    }));
+  },
+
+  removeTeam: (id) => {
+    api.deleteTeam(id);
+    set((s) => ({ teams: s.teams.filter((t) => t.id !== id) }));
+  },
+
+  getTeam: (id) => get().teams.find((t) => t.id === id),
 }));
