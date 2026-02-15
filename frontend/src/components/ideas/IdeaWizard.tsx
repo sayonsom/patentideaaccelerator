@@ -2,11 +2,13 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import type { Idea, FrameworkType, IdeaScore } from "@/lib/types";
+import type { Idea, FrameworkType, IdeaScore, GeneratedIdea, AliceScore } from "@/lib/types";
 import { useIdeaStore, useAuthStore } from "@/lib/store";
+import { useAI } from "@/hooks/useAI";
 import { createBlankIdea } from "@/lib/utils";
-import { Button, Stepper, Input, Textarea, TagInput, Card } from "@/components/ui";
+import { Button, Stepper, Input, Textarea, TagInput, Card, Spinner } from "@/components/ui";
 import { ScoreMatrix } from "./ScoreMatrix";
+import { AliceScoreCard } from "./AliceScoreCard";
 
 const WIZARD_STEPS = [
   { id: "problem", label: "Problem" },
@@ -77,13 +79,13 @@ export function IdeaWizard() {
           <StepFramework draft={draft} update={update} />
         )}
         {step === 2 && (
-          <StepAIPlaceholder />
+          <StepAIIdeation draft={draft} update={update} />
         )}
         {step === 3 && (
           <StepRefine draft={draft} update={update} />
         )}
         {step === 4 && (
-          <StepAlicePlaceholder />
+          <StepAliceCheck draft={draft} update={update} />
         )}
         {step === 5 && (
           <StepReview draft={draft} update={update} />
@@ -182,20 +184,90 @@ function StepFramework({ draft, update }: { draft: Partial<Idea>; update: (u: Pa
   );
 }
 
-// ─── Step 3: AI Assist (Placeholder) ──────────────────────────────
+// ─── Step 3: AI Ideation ──────────────────────────────────────────
 
-function StepAIPlaceholder() {
+function StepAIIdeation({ draft, update }: { draft: Partial<Idea>; update: (u: Partial<Idea>) => void }) {
+  const { ideate, loading, error } = useAI();
+  const [generatedIdeas, setGeneratedIdeas] = useState<GeneratedIdea[]>([]);
+
+  async function generate() {
+    const result = await ideate({
+      problemStatement: draft.problemStatement ?? "",
+      techStack: draft.techStack ?? [],
+      framework: (draft.frameworkUsed as FrameworkType) ?? "open",
+      existingApproach: draft.existingApproach,
+      numIdeas: 3,
+    });
+    if (result?.ideas) {
+      setGeneratedIdeas(result.ideas);
+    }
+  }
+
+  function selectIdea(idea: GeneratedIdea) {
+    update({
+      title: idea.title,
+      proposedSolution: idea.proposedSolution,
+      technicalApproach: idea.technicalApproach,
+      contradictionResolved: idea.contradictionResolved ?? "",
+    });
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="text-4xl mb-4">{"\u2728"}</div>
-      <h2 className="text-lg font-display font-bold text-text-primary mb-2">AI Ideation</h2>
-      <p className="text-sm text-text-secondary max-w-md">
-        Claude will analyze your problem and framework to generate inventive concepts.
-        This feature will be activated when AI integration is wired up.
-      </p>
-      <div className="mt-4 px-4 py-2 rounded-lg bg-accent-gold/10 text-accent-gold text-xs font-medium">
-        Click Continue to skip for now
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-display font-bold text-text-primary mb-1">AI Ideation</h2>
+        <p className="text-sm text-text-secondary">
+          Claude will analyze your problem and generate inventive patent concepts.
+        </p>
       </div>
+
+      <Button variant="accent" onClick={generate} disabled={loading || !draft.problemStatement}>
+        {loading ? <><Spinner size="sm" className="mr-2" /> Generating...</> : "\u2728 Generate Ideas"}
+      </Button>
+
+      {error && (
+        <p className="text-sm text-red-400">{error}</p>
+      )}
+
+      {generatedIdeas.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-text-primary">Generated Concepts ({generatedIdeas.length})</h3>
+          {generatedIdeas.map((idea, i) => (
+            <Card key={i} hover onClick={() => selectIdea(idea)} borderColor={draft.title === idea.title ? "#C69214" : undefined}>
+              <h4 className="text-sm font-semibold text-text-primary mb-1">{idea.title}</h4>
+              <p className="text-xs text-text-secondary mb-2">{idea.proposedSolution}</p>
+              <div className="flex gap-2 flex-wrap">
+                {idea.estimatedCpcClass && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-deep text-text-muted">
+                    CPC: {idea.estimatedCpcClass}
+                  </span>
+                )}
+                {idea.aliceRiskHint && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                    idea.aliceRiskHint === "low" ? "bg-green-900/30 text-green-400" :
+                    idea.aliceRiskHint === "medium" ? "bg-yellow-900/30 text-yellow-400" :
+                    "bg-red-900/30 text-red-400"
+                  }`}>
+                    Alice: {idea.aliceRiskHint}
+                  </span>
+                )}
+                {idea.inventivePrincipleUsed && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-deep text-text-muted">
+                    {idea.inventivePrincipleUsed}
+                  </span>
+                )}
+              </div>
+            </Card>
+          ))}
+          <p className="text-xs text-text-muted">Click an idea to use it as your starting point.</p>
+        </div>
+      )}
+
+      {!loading && generatedIdeas.length === 0 && (
+        <p className="text-xs text-text-muted">
+          Click Generate to get AI-powered patent concepts, or Continue to skip.
+        </p>
+      )}
     </div>
   );
 }
@@ -253,20 +325,47 @@ function StepRefine({ draft, update }: { draft: Partial<Idea>; update: (u: Parti
   );
 }
 
-// ─── Step 5: Alice Check (Placeholder) ────────────────────────────
+// ─── Step 5: Alice Check ──────────────────────────────────────────
 
-function StepAlicePlaceholder() {
+function StepAliceCheck({ draft, update }: { draft: Partial<Idea>; update: (u: Partial<Idea>) => void }) {
+  const { scoreAlice, loading, error } = useAI();
+
+  async function runCheck() {
+    const result = await scoreAlice({
+      title: draft.title ?? "",
+      problemStatement: draft.problemStatement ?? "",
+      proposedSolution: draft.proposedSolution ?? "",
+      technicalApproach: draft.technicalApproach ?? "",
+    });
+    if (result) {
+      update({ aliceScore: result });
+    }
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="text-4xl mb-4">{"\u2696\uFE0F"}</div>
-      <h2 className="text-lg font-display font-bold text-text-primary mb-2">Alice / Section 101 Pre-Screen</h2>
-      <p className="text-sm text-text-secondary max-w-md">
-        AI will evaluate your idea against the Alice framework to estimate patent eligibility.
-        This feature will be activated when AI integration is wired up.
-      </p>
-      <div className="mt-4 px-4 py-2 rounded-lg bg-accent-gold/10 text-accent-gold text-xs font-medium">
-        Click Continue to skip for now
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-display font-bold text-text-primary mb-1">Alice / Section 101 Pre-Screen</h2>
+        <p className="text-sm text-text-secondary">
+          AI evaluates your idea against the Alice framework to estimate patent eligibility.
+        </p>
       </div>
+
+      <Button variant="accent" onClick={runCheck} disabled={loading || (!draft.title && !draft.proposedSolution)}>
+        {loading ? <><Spinner size="sm" className="mr-2" /> Analyzing...</> : "\u2696\uFE0F Run Alice Check"}
+      </Button>
+
+      {error && <p className="text-sm text-red-400">{error}</p>}
+
+      {draft.aliceScore && (
+        <AliceScoreCard score={draft.aliceScore as AliceScore} />
+      )}
+
+      {!draft.aliceScore && !loading && (
+        <p className="text-xs text-text-muted">
+          Click Run Alice Check to evaluate eligibility, or Continue to skip.
+        </p>
+      )}
     </div>
   );
 }
