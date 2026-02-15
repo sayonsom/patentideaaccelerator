@@ -6,6 +6,7 @@ import { TRIZWorksheet } from "@/components/frameworks/TRIZWorksheet";
 import { SITWorksheet } from "@/components/frameworks/SITWorksheet";
 import { CKWorksheet } from "@/components/frameworks/CKWorksheet";
 import { FMEAInversion } from "@/components/frameworks/FMEAInversion";
+import { ContradictionMatrix } from "@/components/frameworks/ContradictionMatrix";
 
 const FRAMEWORK_TABS = [
   { id: "matrix", label: "Contradiction Matrix" },
@@ -26,14 +27,7 @@ export default function FrameworksPage() {
 
       <Tabs tabs={FRAMEWORK_TABS} activeTab={activeTab} onChange={setActiveTab}>
         <TabPanel id="matrix" activeTab={activeTab}>
-          <div className="py-8 text-center">
-            <div className="text-4xl mb-4">{"\u26A1"}</div>
-            <h2 className="text-lg font-display font-bold text-text-primary mb-2">Software Contradiction Matrix</h2>
-            <p className="text-sm text-text-secondary max-w-md mx-auto">
-              The interactive contradiction matrix will be built in the next commit.
-              Select improving and worsening parameters to discover inventive principles.
-            </p>
-          </div>
+          <ContradictionMatrix />
         </TabPanel>
 
         <TabPanel id="triz" activeTab={activeTab}>
