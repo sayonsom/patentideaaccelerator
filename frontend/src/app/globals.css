@@ -1,0 +1,105 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Font families */
+  --font-body: "DM Sans", sans-serif;
+  --font-display: "Playfair Display", serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Series colors (light mode) */
+  --series-1: #003A8F;
+  --series-2: #1F4CEB;
+  --series-3: #5B7FA6;
+  --series-4: #2F7F9D;
+  --series-5: #2E6F4E;
+  --series-6: #C69214;
+  --series-7: #7A2E2E;
+  --series-8: #6B7280;
+}
+
+.dark {
+  /* Series colors (dark mode) */
+  --series-1: #4F83CC;
+  --series-2: #1F4CEB;
+  --series-3: #5B7FA6;
+  --series-4: #2F7F9D;
+  --series-5: #4CAF84;
+  --series-6: #E0B84C;
+  --series-7: #C26D6D;
+  --series-8: #9CA3AF;
+}
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  html,
+  body {
+    @apply min-h-screen antialiased;
+    font-family: var(--font-body);
+  }
+
+  body {
+    @apply bg-surface-deep text-text-secondary;
+  }
+
+  ::selection {
+    @apply bg-accent-gold text-surface-deep;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-surface-deep;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border-hover rounded-sm;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-faint;
+  }
+
+  /* Form element base styling */
+  input,
+  textarea,
+  select {
+    font-family: var(--font-body);
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    @apply outline-none ring-1 ring-accent-gold border-accent-gold;
+  }
+
+  button {
+    font-family: var(--font-body);
+    @apply cursor-pointer;
+  }
+
+  button:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+}

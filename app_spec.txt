@@ -1,0 +1,1075 @@
+================================================================================
+APP SPEC — Patent Idea Accelerator (SaaS)
+================================================================================
+Version: 1.0
+Date: 2026-02-15
+Stack: Next.js 14 (App Router) + TypeScript + Tailwind | FastAPI + PostgreSQL | AWS
+
+This spec is the build guide. CLAUDE.md has architecture context and strategy.
+This file has exact endpoints, schemas, page specs, and deploy config.
+
+================================================================================
+1. MONOREPO STRUCTURE
+================================================================================
+
+patent-idea-accelerator/
+├── frontend/                      # Next.js 14 + TypeScript
+│   ├── src/
+│   │   ├── app/
+│   │   ├── components/
+│   │   ├── lib/
+│   │   ├── hooks/
+│   │   └── styles/
+│   ├── public/
+│   ├── next.config.ts
+│   ├── tailwind.config.ts
+│   ├── tsconfig.json
+│   └── package.json
+├── backend/                       # FastAPI + Python 3.11+
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── config.py
+│   │   ├── models/
+│   │   ├── schemas/
+│   │   ├── services/
+│   │   ├── routers/
+│   │   ├── dependencies.py
+│   │   └── exceptions.py
+│   ├── alembic/
+│   │   ├── versions/
+│   │   └── env.py
+│   ├── alembic.ini
+│   ├── requirements.txt
+│   ├── Dockerfile
+│   └── tests/
+├── infra/                         # IaC (optional — CDK or Terraform)
+│   └── ...
+├── docker-compose.yml             # local dev: frontend + backend + db + redis
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── deploy.yml
+├── CLAUDE.md
+├── app_spec.txt                   # this file
+└── README.md
+
+
+================================================================================
+2. BACKEND — FastAPI
+================================================================================
+
+-------------------------------------------------------------------------------
+2.1 Project Layout
+-------------------------------------------------------------------------------
+
+backend/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                    # FastAPI app factory, middleware, CORS
+│   ├── config.py                  # pydantic-settings: env vars
+│   ├── database.py                # async SQLAlchemy engine + session
+│   ├── dependencies.py            # get_db, get_current_user, get_ai_client
+│   ├── exceptions.py              # HTTPException subclasses, RFC 7807
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   ├── idea.py
+│   │   ├── sprint.py
+│   │   ├── prior_art.py
+│   │   └── document.py
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   ├── user.py                # UserCreate, UserResponse, UserUpdate
+│   │   ├── idea.py                # IdeaCreate, IdeaUpdate, IdeaResponse, IdeaList
+│   │   ├── sprint.py
+│   │   ├── ai.py                  # IdeateRequest, IdeateResponse, AliceScoreReq/Res, ClaimDraftReq/Res
+│   │   └── prior_art.py
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   ├── auth.py                # POST /register, POST /login, POST /refresh
+│   │   ├── users.py               # GET /me, PATCH /me
+│   │   ├── ideas.py               # full CRUD + scoring + status transitions
+│   │   ├── sprints.py             # CRUD + membership + timer
+│   │   ├── ai.py                  # /ideate, /alice-score, /claim-draft
+│   │   ├── prior_art.py           # search + cache
+│   │   └── documents.py           # upload + process
+│   └── services/
+│       ├── __init__.py
+│       ├── auth_service.py        # JWT creation, Cognito verification
+│       ├── idea_service.py        # business logic for ideas
+│       ├── ai_service.py          # Claude API wrapper
+│       ├── alice_service.py       # Section 101 scoring logic + prompts
+│       ├── claim_service.py       # claim skeleton generation
+│       ├── prior_art_service.py   # USPTO + Google Patents search
+│       └── document_service.py    # S3 upload + AI extraction
+├── alembic/
+├── tests/
+├── requirements.txt
+└── Dockerfile
+
+-------------------------------------------------------------------------------
+2.2 API Endpoints — Complete List
+-------------------------------------------------------------------------------
+
+All endpoints prefixed: /api/v1
+Auth: Bearer token (JWT) in Authorization header
+Content-Type: application/json unless file upload (multipart/form-data)
+
+AUTH
+----
+POST   /auth/register          # body: {email, password, name} → 201 {user, access_token, refresh_token}
+POST   /auth/login             # body: {email, password} → 200 {access_token, refresh_token}
+POST   /auth/refresh           # body: {refresh_token} → 200 {access_token}
+POST   /auth/logout            # invalidate refresh token → 204
+
+USERS
+-----
+GET    /users/me               # → 200 {id, email, name, interests, created_at}
+PATCH  /users/me               # body: {name?, interests?} → 200 {user}
+
+IDEAS (core resource)
+-----
+GET    /ideas                  # query: ?status=draft&phase=foundation&sort=-updated_at&page=1&per_page=20
+                               # → 200 {items: Idea[], total: int, page: int}
+POST   /ideas                  # body: IdeaCreate → 201 {idea}
+GET    /ideas/{id}             # → 200 {idea} (full detail incl. scores, claims, framework_data)
+PATCH  /ideas/{id}             # body: IdeaUpdate → 200 {idea}
+DELETE /ideas/{id}             # → 204
+POST   /ideas/{id}/score       # body: {inventive_step: 1-3, defensibility: 1-3, product_fit: 1-3} → 200
+POST   /ideas/{id}/transition  # body: {status: "developing"} → 200 (status machine: draft→developing→scored→filed→archived)
+
+AI ENDPOINTS
+------------
+POST   /ai/ideate              # body: IdeateRequest → 200 {ideas: GeneratedIdea[]}
+POST   /ai/alice-score         # body: AliceScoreRequest → 200 {AliceScoreResponse}
+POST   /ai/claim-draft         # body: ClaimDraftRequest → 200 {method_claim, system_claim, crm_claim}
+POST   /ai/refine              # body: {idea_id, instruction: "make more specific..."} → 200 {refined_text}
+
+PRIOR ART
+---------
+POST   /ideas/{id}/prior-art   # body: {query?: string} (auto-generates if blank) → 200 {results: Patent[]}
+GET    /ideas/{id}/prior-art   # → 200 cached results
+
+SPRINTS (team mode — Phase 2, stub endpoints now)
+-------
+GET    /sprints                # → 200 {items: Sprint[]}
+POST   /sprints                # body: SprintCreate → 201
+GET    /sprints/{id}           # → 200 (with members + ideas)
+PATCH  /sprints/{id}           # update name, mode, phase
+POST   /sprints/{id}/members   # body: {user_id, role} → 201
+DELETE /sprints/{id}/members/{user_id} → 204
+POST   /sprints/{id}/timer     # body: {action: "start"|"pause"|"reset"} → 200
+
+DOCUMENTS (Phase 2 — stub now)
+---------
+POST   /documents/upload       # multipart: file + file_type → 201 {document}
+GET    /documents/{id}         # → 200 (with extracted_ideas if processed)
+POST   /documents/{id}/process # trigger AI extraction → 202
+
+HEALTH
+------
+GET    /health                 # → 200 {"status": "ok", "db": "ok", "redis": "ok"}
+
+-------------------------------------------------------------------------------
+2.3 Request/Response Schemas (Pydantic v2)
+-------------------------------------------------------------------------------
+
+# --- Ideas ---
+
+class IdeaCreate(BaseModel):
+    title: str                              # max 500 chars
+    problem_statement: str | None = None
+    proposed_solution: str | None = None
+    technical_approach: str | None = None
+    contradiction_resolved: str | None = None
+    framework_used: str | None = None       # triz|sit|ck|analogy|fmea|none
+    framework_data: dict | None = None      # framework-specific JSON
+    tags: list[str] = []
+
+class IdeaUpdate(BaseModel):
+    title: str | None = None
+    problem_statement: str | None = None
+    proposed_solution: str | None = None
+    technical_approach: str | None = None
+    contradiction_resolved: str | None = None
+    prior_art_notes: str | None = None
+    framework_used: str | None = None
+    framework_data: dict | None = None
+    red_team_notes: str | None = None
+    tags: list[str] | None = None
+    # claims (updated after AI generation or manual edit)
+    claim_method: str | None = None
+    claim_system: str | None = None
+    claim_crm: str | None = None
+
+class IdeaResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    sprint_id: UUID | None
+    title: str
+    problem_statement: str | None
+    proposed_solution: str | None
+    technical_approach: str | None
+    contradiction_resolved: str | None
+    prior_art_notes: str | None
+    status: str
+    phase: str
+    score_inventive_step: int | None
+    score_defensibility: int | None
+    score_product_fit: int | None
+    alice_overall_score: int | None
+    alice_abstract_idea_risk: str | None
+    alice_practical_application: str | None
+    alice_inventive_concept: str | None
+    alice_explanation: str | None
+    framework_used: str | None
+    framework_data: dict | None
+    claim_method: str | None
+    claim_system: str | None
+    claim_crm: str | None
+    red_team_notes: str | None
+    tags: list[str]
+    created_at: datetime
+    updated_at: datetime
+
+# --- AI ---
+
+class IdeateRequest(BaseModel):
+    problem_statement: str
+    tech_stack: list[str] = []              # e.g. ["kubernetes", "ML inference"]
+    framework: str = "open"                 # triz|sit|ck|analogy|fmea|open
+    existing_approach: str | None = None
+    num_ideas: int = 5                      # 1-10
+
+class GeneratedIdea(BaseModel):
+    title: str
+    problem_reframed: str
+    proposed_solution: str
+    technical_approach: str
+    contradiction_resolved: str | None
+    inventive_principle_used: str | None
+    estimated_cpc_class: str | None
+    alice_risk_hint: str                    # low|medium|high
+
+class IdeateResponse(BaseModel):
+    ideas: list[GeneratedIdea]
+    framework_used: str
+    prompt_tokens: int
+    completion_tokens: int
+
+class AliceScoreRequest(BaseModel):
+    title: str
+    problem_statement: str
+    proposed_solution: str
+    technical_approach: str
+
+class AliceScoreResponse(BaseModel):
+    overall_score: int                      # 0-100
+    abstract_idea_risk: str                 # low|medium|high
+    abstract_idea_analysis: str
+    practical_application: str
+    inventive_concept: str
+    recommendations: list[str]
+    comparable_cases: list[str]             # e.g. ["Enfish v. Microsoft (favorable)"]
+
+class ClaimDraftRequest(BaseModel):
+    title: str
+    technical_approach: str
+    proposed_solution: str
+
+class ClaimDraftResponse(BaseModel):
+    method_claim: str
+    system_claim: str
+    crm_claim: str                          # computer-readable medium
+    notes: str                              # AI notes on claim strength
+
+# --- Prior Art ---
+
+class PatentResult(BaseModel):
+    patent_number: str
+    title: str
+    abstract: str
+    filing_date: str | None
+    grant_date: str | None
+    cpc_classes: list[str]
+    relevance_note: str                     # AI-generated 1-liner on why relevant
+    url: str
+
+class PriorArtResponse(BaseModel):
+    query_used: str
+    results: list[PatentResult]
+    searched_at: datetime
+
+
+-------------------------------------------------------------------------------
+2.4 AI Service — Claude Prompt Templates
+-------------------------------------------------------------------------------
+
+All AI calls use: claude-sonnet-4-20250514 (fast, cheap for iteration)
+Switch to opus for final claim drafts if quality warrants it.
+
+IDEATION SYSTEM PROMPT (store in backend/app/services/prompts/ideate.txt):
+"""
+You are a senior patent engineer specializing in software, cloud, and AI inventions.
+
+Given a problem statement and optional tech stack, generate {num_ideas} novel inventive 
+concepts that could be filed as US utility patents.
+
+RULES:
+- Each idea must describe a SPECIFIC TECHNICAL IMPROVEMENT to computing, not an abstract 
+  business method
+- Frame each idea as: what was the problem → what is the novel technical approach → why 
+  is it non-obvious
+- If framework is "triz", use Software Inventive Principles (see below) to resolve the 
+  identified contradiction
+- Tag each idea with estimated CPC class and Alice/101 risk level
+- Ideas should be distinct from each other — explore different angles
+
+SOFTWARE INVENTIVE PRINCIPLES:
+{principles_json}
+
+Respond in JSON matching this schema:
+{schema}
+"""
+
+ALICE SCORING SYSTEM PROMPT:
+"""
+You are a US patent eligibility analyst. Evaluate this invention disclosure under 
+Alice Corp. v. CLS Bank (2014) and the Mayo framework.
+
+Apply the two-step test:
+Step 1: Is the claim directed to an abstract idea, law of nature, or natural phenomenon?
+  - Categories of abstract ideas: mathematical concepts, methods of organizing human 
+    activity, mental processes
+Step 2: If yes to Step 1, does the claim recite an "inventive concept" that transforms 
+  it into patent-eligible subject matter?
+
+Consider: Enfish v. Microsoft (specific improvement to computer functionality = eligible),
+  DDR Holdings (specific internet-based solution = eligible), 
+  Alice v. CLS Bank (generic computer implementation of abstract idea = ineligible).
+
+Score 0-100 where:
+  0-30 = High risk of 101 rejection (likely abstract idea, no inventive concept)
+  31-60 = Medium risk (some abstract elements, but arguable inventive concept)  
+  61-100 = Low risk (specific technical improvement, strong inventive concept)
+
+Respond in JSON matching this schema:
+{schema}
+"""
+
+CLAIM DRAFT SYSTEM PROMPT:
+"""
+You are a patent claim drafter. Generate three independent claims for this invention:
+1. Method claim (A method for..., comprising steps...)
+2. System claim (A system comprising: processor, memory, wherein...)
+3. CRM claim (A non-transitory computer-readable medium storing instructions...)
+
+RULES:
+- Use formal patent language
+- Each claim should have 3-6 elements/steps
+- Be specific to the technical implementation, not the business goal
+- Avoid means-plus-function language unless necessary
+- Include at least one dependent claim idea as a note
+
+Respond in JSON matching this schema:
+{schema}
+"""
+
+-------------------------------------------------------------------------------
+2.5 Database Config
+-------------------------------------------------------------------------------
+
+- Engine: PostgreSQL 15+ (asyncpg driver)
+- Connection: async SQLAlchemy 2.0
+- Migrations: Alembic (async)
+- Connection pool: 5 min, 20 max
+- All timestamps: TIMESTAMPTZ (UTC)
+- All IDs: UUID v4 (gen_random_uuid())
+- Indexes:
+    ideas: (user_id), (user_id, status), (user_id, updated_at DESC)
+    sprints: (owner_id)
+    prior_art_results: (idea_id)
+    documents: (user_id)
+
+-------------------------------------------------------------------------------
+2.6 Auth Flow
+-------------------------------------------------------------------------------
+
+Option A (recommended for MVP): JWT-based, self-managed
+  - POST /auth/register → hash password (bcrypt), create user, return JWT pair
+  - POST /auth/login → verify password, return JWT pair  
+  - Access token: 15min expiry, HS256
+  - Refresh token: 7 day expiry, stored in DB (revocable)
+  - get_current_user dependency: decode JWT, fetch user from DB, cache in Redis
+
+Option B (later): AWS Cognito
+  - Frontend uses Amplify Auth or NextAuth.js CognitoProvider
+  - Backend verifies Cognito JWT (RS256, fetch JWKS from Cognito endpoint)
+  - cognito_sub stored in users table for mapping
+
+Start with Option A. Migrate to Cognito when you need social login, MFA, etc.
+
+-------------------------------------------------------------------------------
+2.7 Rate Limiting
+-------------------------------------------------------------------------------
+
+Redis-backed rate limiting via slowapi or custom middleware:
+  - AI endpoints: 20 req/min per user (expensive Claude calls)
+  - CRUD endpoints: 100 req/min per user
+  - Auth endpoints: 10 req/min per IP (brute force protection)
+  - Prior art search: 10 req/min per user
+
+
+================================================================================
+3. FRONTEND — Next.js + TypeScript
+================================================================================
+
+-------------------------------------------------------------------------------
+3.1 Pages & Routes
+-------------------------------------------------------------------------------
+
+ROUTE                          COMPONENT              AUTH     DESCRIPTION
+/                              page.tsx               no       landing page (marketing)
+/login                         (auth)/login/page.tsx  no       email + password
+/signup                        (auth)/signup/page.tsx no       registration
+/dashboard                     redirect → /ideas      yes      
+/ideas                         ideas/page.tsx         yes      idea list + grid/table view
+/ideas/new                     ideas/new/page.tsx     yes      guided idea wizard (multi-step)
+/ideas/[id]                    ideas/[id]/page.tsx    yes      single idea — edit, score, claims
+/frameworks                    frameworks/page.tsx    yes      standalone TRIZ/SIT/CK/Matrix tools
+/prior-art                     prior-art/page.tsx     yes      standalone patent search
+/sprints                       sprints/page.tsx       yes      sprint list (Phase 2)
+/sprints/[id]                  sprints/[id]/page.tsx  yes      sprint workspace (Phase 2)
+/settings                      settings/page.tsx      yes      account, interests, API usage
+
+-------------------------------------------------------------------------------
+3.2 Page Specs — Individual Ideation Flow (Primary)
+-------------------------------------------------------------------------------
+
+PAGE: /ideas (Ideas Dashboard)
+---------------------------------
+Layout: Dashboard shell (sidebar + topbar)
+Content:
+  - Top bar: "My Ideas" title + "New Idea" button (primary CTA)
+  - Filter row: status chips (All | Draft | Developing | Scored | Filed) + sort dropdown
+  - Ideas grid: cards showing:
+      - Title (bold, truncated to 2 lines)
+      - Status badge (color-coded)
+      - Alice score badge if scored (green/yellow/red)
+      - 3×3 score as small dot matrix if scored
+      - Framework tag if set (TRIZ, SIT, etc.)
+      - Updated timestamp
+      - Tags
+  - Empty state: illustration + "Create your first patent idea" CTA
+  - Click card → navigate to /ideas/[id]
+
+PAGE: /ideas/new (Idea Creation Wizard)
+-----------------------------------------
+Layout: Full-width within dashboard shell, stepper at top
+Steps (user can skip/jump to any):
+
+  Step 1: "What did you build?"
+    - problem_statement: textarea, placeholder "Describe the technical problem you solved..."
+    - existing_approach: textarea (optional), "What was the existing/naive approach?"
+    - tech_stack: multi-select tag input from predefined list + custom
+    - [Next] button
+
+  Step 2: "Choose a framework" (optional)
+    - Card grid: TRIZ | SIT | C-K Theory | Analogy | FMEA Inversion | Freeform
+    - Each card: icon, name, one-line description, "Use" button
+    - If TRIZ selected → show contradiction selector (improving param vs worsening param 
+      from software parameters list). Show suggested inventive principles.
+    - If SIT → show 5 template cards (Subtraction, Multiplication, Division, Task 
+      Unification, Attribute Dependency). User picks one, gets worksheet.
+    - If C-K → concept space / knowledge space canvas
+    - If Freeform → skip to Step 3
+
+  Step 3: "AI-Assisted Ideation"
+    - Button: "Generate Ideas with AI" → calls POST /ai/ideate
+    - Loading state: animated, ~5-10 seconds
+    - Results: 3-5 idea cards, each with:
+        - Title
+        - Problem reframed
+        - Proposed solution
+        - Technical approach
+        - Contradiction resolved
+        - Alice risk badge
+    - User can: "Use this idea" (copies to form) | "Regenerate" | "Skip AI"
+    - Manual entry always available alongside AI results
+
+  Step 4: "Refine Your Idea"
+    - Form fields pre-filled from Step 3 selection (or blank if manual):
+        - title (text input)
+        - proposed_solution (textarea)
+        - technical_approach (textarea)
+        - contradiction_resolved (textarea, optional)
+        - tags (multi-select)
+    - Sidebar: framework worksheet data (read-only summary)
+
+  Step 5: "Alice/101 Check" (optional)
+    - Button: "Run Eligibility Check" → calls POST /ai/alice-score
+    - Results card:
+        - Overall score: large number (0-100) with color (red/yellow/green)
+        - Risk level badge
+        - Analysis sections: Abstract Idea | Practical Application | Inventive Concept
+        - Recommendations list
+        - Comparable cases
+    - User can revise idea based on feedback, re-run check
+
+  Step 6: "Save"
+    - Review summary of all fields
+    - [Save as Draft] (default) | [Save & Generate Claims]
+    - If "Save & Generate Claims" → also calls POST /ai/claim-draft, saves claims
+    - Redirect to /ideas/[id]
+
+PAGE: /ideas/[id] (Idea Detail)
+---------------------------------
+Layout: Two-column within dashboard shell
+
+Left column (60%):
+  - Editable title (inline edit)
+  - Status badge + phase badge (clickable to transition)
+  - Tabbed content:
+      Tab "Overview": problem, solution, technical approach, contradiction (all editable)
+      Tab "Framework": framework worksheet (TRIZ/SIT/CK data, read-only or editable)
+      Tab "Claims": method/system/CRM claims (editable text areas)
+      Tab "Red Team": red team notes textarea + AI "challenge this idea" button
+      Tab "Prior Art": search results + "Search Again" button
+
+Right column (40%):
+  - Alice Score Card (if scored): score, risk, key findings. "Re-score" button.
+  - 3×3 Scoring Matrix: 3 sliders (Inventive Step, Defensibility, Product Fit), each 1-3
+  - Tags editor
+  - Metadata: created, updated, framework used
+  - Actions: Export JSON | Delete | Archive
+
+-------------------------------------------------------------------------------
+3.3 Page Specs — Other Pages
+-------------------------------------------------------------------------------
+
+PAGE: /frameworks (Standalone Tools)
+--------------------------------------
+Tabbed interface:
+  - Tab "Software Contradiction Matrix"
+      Two dropdowns: Improving Parameter | Worsening Parameter (from 30 software params)
+      On select: show suggested inventive principles with descriptions + examples
+      "Generate ideas for this contradiction" → AI ideation pre-filled
+  - Tab "TRIZ" — ported from existing Frameworks.js
+  - Tab "SIT" — ported from existing Frameworks.js  
+  - Tab "C-K Theory" — ported from existing Frameworks.js
+  - Tab "FMEA Inversion" — NEW:
+      Table: Failure Mode | Effect | Severity | Novel Mitigation | Patent Candidate?
+      AI assist: "Suggest failure modes for [tech stack]"
+
+PAGE: /prior-art (Standalone Search)
+--------------------------------------
+  - Search input + CPC class filter (multi-select)
+  - Results list: patent cards with title, abstract, filing date, CPC classes, link
+  - Click to expand: full abstract + AI relevance note
+  - "Save to idea" button on each result (links to existing idea)
+
+PAGE: /settings
+--------------------------------------
+  - Profile: name, email, interests (tag editor)
+  - Usage: API calls this month, ideas created, Alice checks run
+  - Billing: placeholder for Stripe integration (Phase 3)
+
+PAGE: / (Landing Page)
+--------------------------------------
+  - Hero: headline + subheadline + "Start Free" CTA
+  - 3-feature section: AI Ideation | Alice Pre-Screen | Claim Drafting
+  - How it works: 4-step flow diagram
+  - Social proof placeholder
+  - Pricing placeholder (Free tier: 10 ideas/mo, Pro: unlimited)
+  - Footer
+
+-------------------------------------------------------------------------------
+3.4 Component Inventory
+-------------------------------------------------------------------------------
+
+PRIMITIVES (src/components/ui/):
+  Button.tsx         — variants: primary, secondary, ghost, danger. sizes: sm, md, lg
+  Input.tsx          — text input with label, error state
+  Textarea.tsx       — auto-resize textarea
+  Select.tsx         — dropdown select
+  Badge.tsx          — status/tag badges, color variants
+  Card.tsx           — container with optional header, padding variants
+  Modal.tsx          — dialog overlay, close on escape/click-outside
+  Tabs.tsx           — tab bar + panels
+  Stepper.tsx        — horizontal step indicator for wizard
+  TagInput.tsx       — multi-select tag input with autocomplete
+  Spinner.tsx        — loading spinner
+  EmptyState.tsx     — illustration + message + CTA
+  Toast.tsx          — notification toasts (success, error, info)
+
+IDEA COMPONENTS (src/components/ideas/):
+  IdeaCard.tsx       — card for grid view (title, status, score badges)
+  IdeaWizard.tsx     — multi-step creation flow orchestrator
+  IdeaDetail.tsx     — full idea view with tabs
+  AliceScoreCard.tsx — score display with gauge/color + analysis accordion
+  ClaimDraft.tsx     — three claim text areas with copy buttons
+  ScoreMatrix.tsx    — 3×3 scoring UI (three sliders + composite display)
+
+FRAMEWORK COMPONENTS (src/components/frameworks/):
+  TRIZWorksheet.tsx          — ported from Frameworks.js TRIZ panel
+  SITWorksheet.tsx           — ported from Frameworks.js SIT panel
+  CKWorksheet.tsx            — ported from Frameworks.js C-K panel
+  ContradictionMatrix.tsx    — NEW: software param selector + principles display
+  FMEAInversion.tsx          — NEW: failure mode table + AI assist
+
+PRIOR ART (src/components/prior-art/):
+  SearchForm.tsx             — search input + CPC filter
+  PatentResultCard.tsx       — single patent result display
+
+LAYOUT (src/components/layout/):
+  Sidebar.tsx                — nav links: Ideas, Frameworks, Prior Art, Settings
+  TopBar.tsx                 — breadcrumb, user menu, "New Idea" button
+  DashboardShell.tsx         — sidebar + topbar + main content area
+
+-------------------------------------------------------------------------------
+3.5 State Management
+-------------------------------------------------------------------------------
+
+Zustand stores (src/lib/store.ts):
+
+useAuthStore:
+  - user: User | null
+  - token: string | null
+  - login(email, password) → void
+  - logout() → void
+  - isAuthenticated: boolean
+
+useIdeaStore:
+  - ideas: Idea[]
+  - currentIdea: Idea | null
+  - filters: { status, phase, sort }
+  - fetchIdeas() → void
+  - fetchIdea(id) → void
+  - createIdea(data) → Idea
+  - updateIdea(id, data) → Idea
+  - deleteIdea(id) → void
+
+useAIStore:
+  - isGenerating: boolean
+  - generatedIdeas: GeneratedIdea[]
+  - aliceScore: AliceScoreResponse | null
+  - claimDraft: ClaimDraftResponse | null
+  - generateIdeas(req) → void
+  - scoreAlice(req) → void
+  - draftClaims(req) → void
+
+Data fetching: use React Query (TanStack Query) for server state.
+Zustand only for UI state (filters, modals, wizard step).
+
+-------------------------------------------------------------------------------
+3.6 API Client (src/lib/api.ts)
+-------------------------------------------------------------------------------
+
+Typed wrapper around fetch:
+
+const api = {
+  get<T>(path: string): Promise<T>,
+  post<T>(path: string, body: unknown): Promise<T>,
+  patch<T>(path: string, body: unknown): Promise<T>,
+  delete(path: string): Promise<void>,
+}
+
+Automatically:
+  - Prepends NEXT_PUBLIC_API_URL
+  - Attaches Bearer token from auth store
+  - Parses JSON response
+  - Throws typed errors (ApiError class with status, title, detail)
+  - Handles 401 → redirect to /login
+
+-------------------------------------------------------------------------------
+3.7 Tailwind Config
+-------------------------------------------------------------------------------
+
+// tailwind.config.ts
+{
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        // Light mode base
+        surface: {
+          DEFAULT: "#FFFFFF",
+          panel: "#F5F7FA",
+        },
+        border: {
+          grid: "#E5E7EB",
+          axis: "#D1D5DB",
+        },
+        text: {
+          primary: "#111827",
+          secondary: "#4B5563",
+        },
+        // Dark overrides via dark: prefix use these
+        dark: {
+          surface: "#0B1220",
+          panel: "#111827",
+          grid: "#1F2933",
+          axis: "#374151",
+          textPrimary: "#E5E7EB",
+          textSecondary: "#9CA3AF",
+        },
+        // Series colors (charts, badges, accents)
+        series: {
+          1: "var(--series-1)",  // resolved via CSS custom properties
+          2: "var(--series-2)",
+          3: "var(--series-3)",
+          4: "var(--series-4)",
+          5: "var(--series-5)",
+          6: "var(--series-6)",
+          7: "var(--series-7)",
+          8: "var(--series-8)",
+        },
+        // Semantic
+        accent: "#1F4CEB",       // series-2, primary action
+        success: "#2E6F4E",      // series-5 light / #4CAF84 dark
+        warning: "#C69214",      // series-6 light / #E0B84C dark  
+        danger: "#7A2E2E",       // series-7 light / #C26D6D dark
+      },
+    },
+  },
+}
+
+CSS custom properties in globals.css for series colors:
+:root {
+  --series-1: #003A8F;
+  --series-2: #1F4CEB;
+  --series-3: #5B7FA6;
+  --series-4: #2F7F9D;
+  --series-5: #2E6F4E;
+  --series-6: #C69214;
+  --series-7: #7A2E2E;
+  --series-8: #6B7280;
+}
+.dark {
+  --series-1: #4F83CC;
+  --series-2: #1F4CEB;
+  --series-3: #5B7FA6;
+  --series-4: #2F7F9D;
+  --series-5: #4CAF84;
+  --series-6: #E0B84C;
+  --series-7: #C26D6D;
+  --series-8: #9CA3AF;
+}
+
+
+================================================================================
+4. SOFTWARE INVENTIVE PRINCIPLES DATA
+================================================================================
+
+Store in: frontend/src/lib/software-principles.ts
+Also load into backend for AI prompt context.
+
+30 SOFTWARE PARAMETERS (v1):
+ID  Name                                    Category
+1   Response Latency                        performance
+2   Data Consistency                        data
+3   Throughput                              performance
+4   Resource Cost (compute/memory)          operations
+5   Query Performance                       performance
+6   Data Freshness                          data
+7   Horizontal Scalability                  scale
+8   Predictable Costs                       operations
+9   Fault Tolerance                         reliability
+10  Infrastructure Complexity               operations
+11  Authentication Strength                 security
+12  User Friction                           product
+13  Feature Completeness                    product
+14  UX Simplicity                           product
+15  Development Velocity                    engineering
+16  Code Quality / Maintainability          engineering
+17  Model Accuracy                          ai_ml
+18  Inference Latency                       ai_ml
+19  Training Data Volume                    ai_ml
+20  Privacy Preservation                    security
+21  API Surface Area                        integration
+22  Maintenance Burden                      engineering
+23  Offline Capability                      reliability
+24  Sync Complexity                         data
+25  Observability Depth                     operations
+26  Performance Overhead                    performance
+27  Multi-tenancy Isolation                 architecture
+28  Customization Flexibility               architecture
+29  Schema Rigidity                         data
+30  Deployment Frequency                    engineering
+
+The contradiction matrix is a 30×30 sparse matrix.
+Each cell (improving_param, worsening_param) → list of principle IDs.
+Populate iteratively — start with ~50 high-value cells from patent analysis.
+
+EXAMPLE PRINCIPLES (v1, ~15 to start, expand to 40):
+ID  Name                          Description
+1   Segmentation / Microservices  Break monolith into independently deployable units
+2   Extraction / Separation       Move a concern to its own layer or service
+3   Asymmetry / Read-Write Split  Separate read path from write path (CQRS)
+4   Prior Action / Pre-computation Cache, pre-compute, warm up before request
+5   Inversion / Edge Push         Move processing closer to data source or user
+6   Intermediary / Proxy          Insert middleware, sidecar, or gateway
+7   Self-Service / Self-Healing   System detects and recovers from failure automatically
+8   Dynamism / Adaptive Config    Replace static config with runtime-adaptive behavior
+9   Partial Action / Degradation  Serve partial results when full results unavailable
+10  Feedback Loop / Observability Close the loop: measure, alert, auto-adjust
+11  Discarding / Ephemeral        Use disposable resources (containers, spot instances)
+12  Dimensionality Change         Move from request-response to event-driven / streaming
+13  Universality / Abstraction    One mechanism handles multiple use cases
+14  Copying / Replication         Replicate data or compute for availability / speed
+15  Nesting / Composition         Compose smaller primitives into complex behavior
+
+
+================================================================================
+5. DEPLOYMENT — AWS
+================================================================================
+
+-------------------------------------------------------------------------------
+5.1 Infrastructure Components
+-------------------------------------------------------------------------------
+
+COMPONENT           AWS SERVICE             CONFIG
+Frontend            ECS Fargate             Next.js standalone, 0.5 vCPU / 1GB
+Backend             ECS Fargate             FastAPI + uvicorn, 1 vCPU / 2GB
+Database            RDS PostgreSQL 15       db.t4g.micro (dev) → db.t4g.medium (prod)
+Cache               ElastiCache Redis       cache.t4g.micro
+Storage             S3                      patent-ideator-uploads bucket
+CDN                 CloudFront              frontend + S3 assets
+DNS                 Route 53                A record → CloudFront
+SSL                 ACM                     wildcard cert for domain
+Auth                Cognito (Phase 2)       user pool + app client
+Secrets             Secrets Manager         DB pass, API keys, JWT secret
+Container Registry  ECR                     frontend + backend images
+Logging             CloudWatch Logs         ECS task logs
+Monitoring          CloudWatch + Sentry     error tracking + dashboards
+
+-------------------------------------------------------------------------------
+5.2 docker-compose.yml (Local Dev)
+-------------------------------------------------------------------------------
+
+version: "3.9"
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: patent
+      POSTGRES_PASSWORD: patent_dev
+      POSTGRES_DB: patent_ideator
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports: ["8000:8000"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://patent:patent_dev@db:5432/patent_ideator
+      REDIS_URL: redis://redis:6379/0
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      JWT_SECRET: dev-secret-change-me
+      CORS_ORIGINS: http://localhost:3000
+    depends_on: [db, redis]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports: ["3000:3000"]
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on: [backend]
+
+volumes:
+  pgdata:
+
+-------------------------------------------------------------------------------
+5.3 Dockerfiles
+-------------------------------------------------------------------------------
+
+# backend/Dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# frontend/Dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+EXPOSE 3000
+CMD ["node", "server.js"]
+
+-------------------------------------------------------------------------------
+5.4 GitHub Actions CI/CD
+-------------------------------------------------------------------------------
+
+Trigger: push to main
+Steps:
+  1. Lint + type-check frontend (tsc --noEmit + eslint)
+  2. Lint + test backend (pytest + ruff)
+  3. Build Docker images
+  4. Push to ECR
+  5. Update ECS service (rolling deploy)
+
+Staging: deploy on push to main
+Production: deploy on git tag (v*)
+
+
+================================================================================
+6. IMPLEMENTATION ORDER (BUILD SEQUENCE)
+================================================================================
+
+Build in this exact order. Each step is independently deployable.
+
+STEP 1: Backend scaffold
+  - FastAPI project with config, database, health endpoint
+  - User model + auth (register/login/JWT)
+  - Alembic initial migration
+  - Docker + docker-compose working locally
+  - TEST: curl /health, register, login, /users/me
+
+STEP 2: Ideas CRUD
+  - Idea model + migration
+  - All CRUD endpoints (GET list, POST create, GET detail, PATCH, DELETE)
+  - Score + status transition endpoints
+  - TEST: full idea lifecycle via curl/httpie
+
+STEP 3: Frontend scaffold  
+  - Next.js + TypeScript + Tailwind project
+  - Tailwind config with custom theme
+  - UI primitives: Button, Input, Textarea, Card, Badge, Modal, Tabs
+  - DashboardShell + Sidebar + TopBar
+  - Auth pages (login/signup) wired to backend
+  - TEST: can login, see empty dashboard
+
+STEP 4: Ideas UI
+  - /ideas page with grid view
+  - /ideas/new wizard (Steps 1, 2, 4, 6 — skip AI steps for now)
+  - /ideas/[id] detail page with tabs
+  - ScoreMatrix component
+  - TEST: create idea manually, view it, score it, edit it
+
+STEP 5: AI Integration
+  - ai_service.py with Claude API client
+  - POST /ai/ideate endpoint + prompts
+  - POST /ai/alice-score endpoint + prompts
+  - POST /ai/claim-draft endpoint + prompts
+  - Wire into frontend wizard (Steps 3, 5 of wizard)
+  - AliceScoreCard + ClaimDraft components
+  - TEST: generate ideas, score Alice, draft claims
+
+STEP 6: Software Principles + Contradiction Matrix
+  - software-principles.ts data file (30 params + 15 principles + initial matrix)
+  - ContradictionMatrix.tsx interactive component
+  - Wire into TRIZ worksheet and AI ideation prompts
+  - /frameworks page with all tabs
+  - TEST: select contradictions, see principles, generate ideas from matrix
+
+STEP 7: Prior Art Search
+  - prior_art_service.py (USPTO Open Data + Google Patents scraping)
+  - POST/GET prior-art endpoints
+  - SearchForm + PatentResultCard components
+  - Wire into /ideas/[id] Prior Art tab + standalone /prior-art page
+  - TEST: search returns relevant patents, results cached
+
+STEP 8: Deploy to AWS
+  - ECR repos for frontend + backend
+  - ECS cluster + services + task definitions
+  - RDS PostgreSQL instance
+  - ElastiCache Redis instance
+  - CloudFront distribution
+  - Route 53 DNS
+  - Secrets Manager for env vars
+  - GitHub Actions pipeline
+  - TEST: full flow works on staging URL
+
+STEP 9: Polish + Launch
+  - Landing page (/)
+  - Error handling + loading states everywhere
+  - Toast notifications
+  - Export idea as JSON/PDF
+  - Usage tracking (ideas created, AI calls)
+  - Rate limiting
+  - Sentry error tracking
+
+
+================================================================================
+7. NON-FUNCTIONAL REQUIREMENTS
+================================================================================
+
+Performance:
+  - API response: < 200ms for CRUD, < 15s for AI endpoints
+  - Frontend LCP: < 2s
+  - Ideas list: paginated, 20/page, infinite scroll or pagination
+
+Security:
+  - All passwords: bcrypt, cost factor 12
+  - JWT: HS256, 15min access / 7d refresh
+  - CORS: whitelist frontend origin only
+  - Rate limiting on all endpoints
+  - Input validation: Pydantic on backend, Zod on frontend
+  - SQL injection: SQLAlchemy parameterized queries (default)
+  - XSS: React default escaping + no dangerouslySetInnerHTML
+
+Reliability:
+  - Health check endpoint for ECS
+  - Graceful shutdown handling (uvicorn signals)
+  - DB connection retry with exponential backoff
+  - AI endpoint timeout: 30s, return partial results if possible
+
+Observability:
+  - Structured JSON logging (structlog)
+  - Request ID propagation (middleware)
+  - CloudWatch dashboards: request count, latency p50/p99, error rate
+  - Sentry for exception tracking
+
+
+================================================================================
+8. FUTURE PHASES (NOT IN SCOPE — document for later)
+================================================================================
+
+Phase 2: Team Mode
+  - Multi-user sprints (port full SIMS team workflow)
+  - Real-time collaboration (WebSockets or polling)
+  - Team invitation flow
+  - Sprint timer sync across clients
+
+Phase 3: Integrations
+  - Document upload + AI extraction (ADRs, arch docs)
+  - GitHub integration (scan PRs for inventive decisions)
+  - Slack integration (invention disclosure bot)
+  - JIRA/Linear integration (link ideas to tickets)
+
+Phase 4: Monetization
+  - Stripe billing integration
+  - Free tier: 10 ideas/mo, 5 AI calls/mo
+  - Pro tier: unlimited ideas, 100 AI calls/mo, $49/mo
+  - Team tier: sprints + collaboration, $29/seat/mo
+  - Enterprise: SSO, custom principles, dedicated support
+
+Phase 5: Moat
+  - Software Inventive Principles v2 (analyze 5,000+ patents, full 30×30 matrix)
+  - Patent graph: show idea → prior art → differentiation map
+  - Invention portfolio analytics dashboard
+  - Provisional patent application generator (attorney review required)
+
+================================================================================
+END OF SPEC
+================================================================================
