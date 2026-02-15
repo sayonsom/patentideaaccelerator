@@ -9,7 +9,6 @@ interface AliceScoreCardProps {
 }
 
 function ScoreGauge({ value }: { value: number }) {
-  const rotation = (value / 100) * 180 - 90; // -90 to 90 degrees
   const color =
     value >= 70 ? "#10b981" : value >= 40 ? "#f59e0b" : "#ef4444";
 

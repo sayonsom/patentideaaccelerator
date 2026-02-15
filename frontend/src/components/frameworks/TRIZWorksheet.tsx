@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { TRIZ_PRINCIPLES } from "@/lib/constants";
-import { Card, Textarea, Button } from "@/components/ui";
+import { Textarea } from "@/components/ui";
 import type { TRIZData } from "@/lib/types";
 
 interface TRIZWorksheetProps {
