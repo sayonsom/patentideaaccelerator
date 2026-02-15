@@ -1,20 +1,57 @@
-import { EmptyState } from "@/components/ui";
+"use client";
+
+import { useState } from "react";
+import { Tabs, TabPanel } from "@/components/ui";
+import { TRIZWorksheet } from "@/components/frameworks/TRIZWorksheet";
+import { SITWorksheet } from "@/components/frameworks/SITWorksheet";
+import { CKWorksheet } from "@/components/frameworks/CKWorksheet";
+import { FMEAInversion } from "@/components/frameworks/FMEAInversion";
+
+const FRAMEWORK_TABS = [
+  { id: "matrix", label: "Contradiction Matrix" },
+  { id: "triz", label: "TRIZ" },
+  { id: "sit", label: "SIT" },
+  { id: "ck", label: "C-K Theory" },
+  { id: "fmea", label: "FMEA" },
+];
 
 export default function FrameworksPage() {
+  const [activeTab, setActiveTab] = useState("matrix");
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold text-text-primary">Frameworks</h1>
       </div>
-      <EmptyState
-        icon={
-          <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-          </svg>
-        }
-        title="Inventive frameworks"
-        description="TRIZ, SIT, C-K Theory, and the Software Contradiction Matrix. Coming in the next build."
-      />
+
+      <Tabs tabs={FRAMEWORK_TABS} activeTab={activeTab} onChange={setActiveTab}>
+        <TabPanel id="matrix" activeTab={activeTab}>
+          <div className="py-8 text-center">
+            <div className="text-4xl mb-4">{"\u26A1"}</div>
+            <h2 className="text-lg font-display font-bold text-text-primary mb-2">Software Contradiction Matrix</h2>
+            <p className="text-sm text-text-secondary max-w-md mx-auto">
+              The interactive contradiction matrix will be built in the next commit.
+              Select improving and worsening parameters to discover inventive principles.
+            </p>
+          </div>
+        </TabPanel>
+
+        <TabPanel id="triz" activeTab={activeTab}>
+          <TRIZWorksheet />
+        </TabPanel>
+
+        <TabPanel id="sit" activeTab={activeTab}>
+          <SITWorksheet />
+        </TabPanel>
+
+        <TabPanel id="ck" activeTab={activeTab}>
+          <CKWorksheet />
+        </TabPanel>
+
+        <TabPanel id="fmea" activeTab={activeTab}>
+          <FMEAInversion />
+        </TabPanel>
+      </Tabs>
     </div>
   );
 }
