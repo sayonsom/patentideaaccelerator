@@ -111,6 +111,18 @@ export interface Idea {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// Red Team Result
+// ═══════════════════════════════════════════════════════════════════
+
+export interface RedTeamResult {
+  critique: string;
+  weaknesses: string[];
+  priorArtConcerns: string[];
+  aliceRisks: string[];
+  recommendations: string[];
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Sprint / Team Types
 // ═══════════════════════════════════════════════════════════════════
 

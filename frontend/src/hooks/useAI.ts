@@ -8,6 +8,7 @@ import type {
   AliceScore,
   ClaimDraftRequest,
   ClaimDraft,
+  RedTeamResult,
 } from "@/lib/types";
 
 /**
@@ -95,5 +96,33 @@ export function useAI() {
     }
   }, []);
 
-  return { ideate, scoreAlice, draftClaims, refine, loading, error };
+  const redTeam = useCallback(
+    async (req: {
+      title: string;
+      problemStatement: string;
+      proposedSolution: string;
+      technicalApproach: string;
+      aliceScoreSummary?: string;
+    }): Promise<RedTeamResult | null> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/ai/red-team", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(req),
+        });
+        if (!res.ok) throw new Error(`Red team analysis failed (${res.status})`);
+        return (await res.json()) as RedTeamResult;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Unknown error");
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  return { ideate, scoreAlice, draftClaims, refine, redTeam, loading, error };
 }

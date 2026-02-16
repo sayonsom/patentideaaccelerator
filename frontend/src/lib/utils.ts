@@ -114,6 +114,34 @@ export function createBlankIdea(userId: string): {
   };
 }
 
+// ─── Solo Pipeline Progress ───────────────────────────────────────
+
+import type { Idea } from "./types";
+
+export interface PipelineStage {
+  id: string;
+  label: string;
+  complete: (idea: Idea) => boolean;
+}
+
+export const SOLO_PIPELINE_STAGES: PipelineStage[] = [
+  { id: "problem", label: "Problem Defined", complete: (i) => !!i.problemStatement && i.problemStatement.length > 20 },
+  { id: "framework", label: "Framework Applied", complete: (i) => i.frameworkUsed !== "none" },
+  { id: "solution", label: "Solution Described", complete: (i) => !!i.proposedSolution && !!i.technicalApproach },
+  { id: "scored", label: "Scored (3\u00D73)", complete: (i) => i.score !== null && getTotalScore(i.score) > 0 },
+  { id: "alice", label: "Alice Screened", complete: (i) => i.aliceScore !== null },
+  { id: "prior-art", label: "Prior Art Checked", complete: (i) => !!i.priorArtNotes && i.priorArtNotes.length > 10 },
+  { id: "claims", label: "Claims Drafted", complete: (i) => i.claimDraft !== null },
+  { id: "red-team", label: "Red Team Reviewed", complete: (i) => !!i.redTeamNotes && i.redTeamNotes.length > 20 },
+];
+
+export function getIdeaProgress(idea: Idea): { completed: number; total: number; percent: number; stages: { stage: PipelineStage; done: boolean }[] } {
+  const stages = SOLO_PIPELINE_STAGES.map((stage) => ({ stage, done: stage.complete(idea) }));
+  const completed = stages.filter((s) => s.done).length;
+  const total = stages.length;
+  return { completed, total, percent: Math.round((completed / total) * 100), stages };
+}
+
 /** Classify a string into a status badge color */
 export function getStatusColor(status: string): string {
   switch (status) {
