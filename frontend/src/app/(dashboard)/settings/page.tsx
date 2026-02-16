@@ -1,17 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuthStore, useSettingsStore } from "@/lib/store";
+import { useSession } from "next-auth/react";
+import { useSettingsStore } from "@/lib/store";
 import { Button, Card, Input, Spinner } from "@/components/ui";
 import { toast } from "@/components/ui/Toast";
 
 export default function SettingsPage() {
-  const user = useAuthStore((s) => s.user);
-  const setUser = useAuthStore((s) => s.setUser);
+  const { data: session } = useSession();
   const { apiKey, init: initSettings, setApiKey, clearApiKey } = useSettingsStore();
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [keyInput, setKeyInput] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -22,20 +20,10 @@ export default function SettingsPage() {
   }, [initSettings]);
 
   useEffect(() => {
-    if (user) {
-      setName(user.name);
-      setEmail(user.email);
-    }
-  }, [user]);
-
-  useEffect(() => {
     setKeyInput(apiKey ?? "");
   }, [apiKey]);
 
   function handleSave() {
-    if (user) {
-      setUser({ ...user, name, email, updatedAt: new Date().toISOString() });
-    }
     if (keyInput.trim()) {
       setApiKey(keyInput.trim());
     } else {
@@ -89,12 +77,13 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1">Name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+              <Input value={session?.user?.name ?? ""} disabled placeholder="Managed by Cognito" />
             </div>
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1">Email</label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" />
+              <Input type="email" value={session?.user?.email ?? ""} disabled placeholder="Managed by Cognito" />
             </div>
+            <p className="text-xs text-text-muted">Profile information is managed by your identity provider (AWS Cognito).</p>
           </div>
         </Card>
 
@@ -186,31 +175,8 @@ export default function SettingsPage() {
         <Card>
           <h2 className="text-lg font-semibold text-text-primary mb-4">Data</h2>
           <p className="text-sm text-text-secondary mb-3">
-            All data is stored in your browser&apos;s localStorage. Export to keep a backup.
+            Your ideas and sprint data are stored in PostgreSQL. API key settings are stored locally in your browser.
           </p>
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                const data = {
-                  ideas: JSON.parse(localStorage.getItem("voltedge:ideas") ?? "[]"),
-                  user: JSON.parse(localStorage.getItem("voltedge:user") ?? "null"),
-                  teams: JSON.parse(localStorage.getItem("voltedge:teams") ?? "[]"),
-                };
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `voltedge-export-${new Date().toISOString().slice(0, 10)}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-                toast("Data exported successfully.");
-              }}
-            >
-              Export Data (JSON)
-            </Button>
-          </div>
         </Card>
       </div>
     </div>

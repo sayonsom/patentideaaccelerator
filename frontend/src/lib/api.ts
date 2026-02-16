@@ -1,20 +1,39 @@
 /**
  * API Abstraction Layer
  *
- * Currently uses localStorage. Designed to swap to HTTP calls
- * when the FastAPI backend is introduced — just replace the
- * function bodies in this single file.
+ * Ideas, users, sprints, and teams now delegate to Prisma server actions.
+ * Settings remain in localStorage (per-device, sensitive).
  */
 
 import type { Idea, Sprint, Team, User, IdeaStatus } from "./types";
+import {
+  listIdeasAction,
+  getIdeaAction,
+  createIdeaAction,
+  updateIdeaAction,
+  deleteIdeaAction,
+  filterIdeasAction,
+} from "./actions/ideas";
+import {
+  getUserById,
+  updateDbUser,
+} from "./actions/users";
+import {
+  listSprintsAction,
+  getSprintAction,
+  createSprintAction,
+  updateSprintAction,
+  deleteSprintAction,
+} from "./actions/sprints";
+import {
+  getTeamForSprint,
+  updateTeamAction,
+  listTeamsForUser,
+} from "./actions/teams";
 
-const STORAGE_KEYS = {
-  ideas: "voltedge:ideas",
-  user: "voltedge:user",
-  sprints: "voltedge:sprints",
-  teams: "voltedge:teams",
-  settings: "voltedge:settings",
-} as const;
+// ─── Settings (localStorage — per device) ───────────────────────
+
+const SETTINGS_KEY = "voltedge:settings";
 
 export interface AppSettings {
   anthropicApiKey: string;
@@ -37,158 +56,103 @@ function writeJSON<T>(key: string, value: T): void {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-// ─── User ─────────────────────────────────────────────────────────
-
-export function getUser(): User | null {
-  return readJSON<User | null>(STORAGE_KEYS.user, null);
-}
-
-export function saveUser(user: User): void {
-  writeJSON(STORAGE_KEYS.user, user);
-}
-
-// ─── Ideas ────────────────────────────────────────────────────────
-
-export function listIdeas(): Idea[] {
-  return readJSON<Idea[]>(STORAGE_KEYS.ideas, []);
-}
-
-export function getIdea(id: string): Idea | undefined {
-  return listIdeas().find((i) => i.id === id);
-}
-
-export function createIdea(idea: Idea): Idea {
-  const ideas = listIdeas();
-  ideas.unshift(idea);
-  writeJSON(STORAGE_KEYS.ideas, ideas);
-  return idea;
-}
-
-export function updateIdea(id: string, updates: Partial<Idea>): Idea | undefined {
-  const ideas = listIdeas();
-  const idx = ideas.findIndex((i) => i.id === id);
-  if (idx === -1) return undefined;
-  ideas[idx] = { ...ideas[idx], ...updates, updatedAt: new Date().toISOString() };
-  writeJSON(STORAGE_KEYS.ideas, ideas);
-  return ideas[idx];
-}
-
-export function deleteIdea(id: string): boolean {
-  const ideas = listIdeas();
-  const filtered = ideas.filter((i) => i.id !== id);
-  if (filtered.length === ideas.length) return false;
-  writeJSON(STORAGE_KEYS.ideas, filtered);
-  return true;
-}
-
-export function filterIdeas(opts: {
-  status?: IdeaStatus;
-  search?: string;
-  sortBy?: "updatedAt" | "createdAt" | "title";
-  sortDir?: "asc" | "desc";
-}): Idea[] {
-  let ideas = listIdeas();
-
-  if (opts.status) {
-    ideas = ideas.filter((i) => i.status === opts.status);
-  }
-
-  if (opts.search) {
-    const q = opts.search.toLowerCase();
-    ideas = ideas.filter(
-      (i) =>
-        i.title.toLowerCase().includes(q) ||
-        i.problemStatement.toLowerCase().includes(q) ||
-        i.tags.some((t) => t.toLowerCase().includes(q))
-    );
-  }
-
-  const sortBy = opts.sortBy ?? "updatedAt";
-  const dir = opts.sortDir ?? "desc";
-  ideas.sort((a, b) => {
-    const aVal = a[sortBy];
-    const bVal = b[sortBy];
-    const cmp = typeof aVal === "string" ? aVal.localeCompare(bVal as string) : 0;
-    return dir === "desc" ? -cmp : cmp;
-  });
-
-  return ideas;
-}
-
-// ─── Sprints ──────────────────────────────────────────────────────
-
-export function listSprints(): Sprint[] {
-  return readJSON<Sprint[]>(STORAGE_KEYS.sprints, []);
-}
-
-export function getSprint(id: string): Sprint | undefined {
-  return listSprints().find((s) => s.id === id);
-}
-
-export function createSprint(sprint: Sprint): Sprint {
-  const sprints = listSprints();
-  sprints.unshift(sprint);
-  writeJSON(STORAGE_KEYS.sprints, sprints);
-  return sprint;
-}
-
-export function updateSprint(id: string, updates: Partial<Sprint>): Sprint | undefined {
-  const sprints = listSprints();
-  const idx = sprints.findIndex((s) => s.id === id);
-  if (idx === -1) return undefined;
-  sprints[idx] = { ...sprints[idx], ...updates, updatedAt: new Date().toISOString() };
-  writeJSON(STORAGE_KEYS.sprints, sprints);
-  return sprints[idx];
-}
-
-export function deleteSprint(id: string): boolean {
-  const sprints = listSprints();
-  const filtered = sprints.filter((s) => s.id !== id);
-  if (filtered.length === sprints.length) return false;
-  writeJSON(STORAGE_KEYS.sprints, filtered);
-  return true;
-}
-
-// ─── Teams (Sprint Workspaces with full data) ────────────────────
-
-export function listTeams(): Team[] {
-  return readJSON<Team[]>(STORAGE_KEYS.teams, []);
-}
-
-export function getTeam(id: string): Team | undefined {
-  return listTeams().find((t) => t.id === id);
-}
-
-export function createTeam(team: Team): Team {
-  const teams = listTeams();
-  teams.unshift(team);
-  writeJSON(STORAGE_KEYS.teams, teams);
-  return team;
-}
-
-export function updateTeam(id: string, updates: Partial<Team>): Team | undefined {
-  const teams = listTeams();
-  const idx = teams.findIndex((t) => t.id === id);
-  if (idx === -1) return undefined;
-  teams[idx] = { ...teams[idx], ...updates };
-  writeJSON(STORAGE_KEYS.teams, teams);
-  return teams[idx];
-}
-
-export function deleteTeam(id: string): boolean {
-  const teams = listTeams();
-  const filtered = teams.filter((t) => t.id !== id);
-  if (filtered.length === teams.length) return false;
-  writeJSON(STORAGE_KEYS.teams, filtered);
-  return true;
-}
-
-// ─── Settings ────────────────────────────────────────────────────
-
 export function getSettings(): AppSettings {
-  return readJSON<AppSettings>(STORAGE_KEYS.settings, DEFAULT_SETTINGS);
+  return readJSON<AppSettings>(SETTINGS_KEY, DEFAULT_SETTINGS);
 }
 
 export function saveSettings(settings: AppSettings): void {
-  writeJSON(STORAGE_KEYS.settings, settings);
+  writeJSON(SETTINGS_KEY, settings);
+}
+
+// ─── User (Prisma) ──────────────────────────────────────────────
+
+export async function getUser(id: string): Promise<User | null> {
+  return getUserById(id);
+}
+
+export async function updateUser(
+  id: string,
+  updates: Partial<Pick<User, "name" | "email" | "interests">>
+): Promise<User | null> {
+  return updateDbUser(id, updates);
+}
+
+// ─── Ideas (Prisma) ─────────────────────────────────────────────
+
+export async function listIdeas(userId: string): Promise<Idea[]> {
+  return listIdeasAction(userId);
+}
+
+export async function getIdea(id: string): Promise<Idea | null> {
+  return getIdeaAction(id);
+}
+
+export async function createIdea(idea: Idea): Promise<Idea> {
+  return createIdeaAction(idea);
+}
+
+export async function updateIdea(id: string, updates: Partial<Idea>): Promise<Idea | null> {
+  return updateIdeaAction(id, updates);
+}
+
+export async function deleteIdea(id: string): Promise<boolean> {
+  return deleteIdeaAction(id);
+}
+
+export async function filterIdeas(
+  userId: string,
+  opts: {
+    status?: IdeaStatus;
+    search?: string;
+    sortBy?: "updatedAt" | "createdAt" | "title";
+    sortDir?: "asc" | "desc";
+  }
+): Promise<Idea[]> {
+  return filterIdeasAction(userId, opts);
+}
+
+// ─── Sprints (Prisma) ───────────────────────────────────────────
+
+export async function listSprints(ownerId: string): Promise<Sprint[]> {
+  return listSprintsAction(ownerId);
+}
+
+export async function getSprint(id: string): Promise<Sprint | null> {
+  return getSprintAction(id);
+}
+
+export async function createSprint(data: {
+  id?: string;
+  name: string;
+  ownerId: string;
+}): Promise<Sprint> {
+  return createSprintAction(data);
+}
+
+export async function updateSprint(
+  id: string,
+  updates: Partial<Pick<Sprint, "name" | "status" | "sessionMode" | "phase" | "timerSecondsRemaining" | "timerRunning" | "startedAt">>
+): Promise<Sprint | null> {
+  return updateSprintAction(id, updates);
+}
+
+export async function deleteSprint(id: string): Promise<boolean> {
+  return deleteSprintAction(id);
+}
+
+// ─── Teams (Prisma — reconstructed from Sprint + Members + Ideas) ─
+
+export async function listTeams(userId: string): Promise<Team[]> {
+  return listTeamsForUser(userId);
+}
+
+export async function getTeam(sprintId: string): Promise<Team | null> {
+  return getTeamForSprint(sprintId);
+}
+
+export async function updateTeam(
+  sprintId: string,
+  updates: Partial<Pick<Team, "name" | "sessionMode" | "sprintPhase" | "dataMinister">>
+): Promise<Team | null> {
+  return updateTeamAction(sprintId, updates);
 }

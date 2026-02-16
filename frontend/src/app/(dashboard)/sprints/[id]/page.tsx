@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useTeamStore, useAuthStore } from "@/lib/store";
+import { useSession } from "next-auth/react";
+import { useTeamStore } from "@/lib/store";
 import { SprintBoard } from "@/components/sprints/SprintBoard";
 import { Spinner } from "@/components/ui";
 import type { Team } from "@/lib/types";
@@ -11,15 +12,16 @@ export default function SprintDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { data: session } = useSession();
 
   const { teams, loading, loadTeams, updateTeam, getTeam } = useTeamStore();
-  const initAuth = useAuthStore((s) => s.init);
 
   useEffect(() => {
-    initAuth();
-    loadTeams();
+    if (session?.user?.id) {
+      loadTeams(session.user.id);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [session?.user?.id]);
 
   const team = getTeam(id);
 

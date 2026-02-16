@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useIdeaStore, useAuthStore } from "@/lib/store";
+import { useSession } from "next-auth/react";
+import { useIdeaStore } from "@/lib/store";
 import { IdeaDetail } from "@/components/ideas/IdeaDetail";
 import { Spinner } from "@/components/ui";
 
@@ -11,18 +12,19 @@ export default function IdeaDetailPage() {
   const router = useRouter();
   const id = params.id as string;
 
-  const initAuth = useAuthStore((s) => s.init);
+  const { data: session, status } = useSession();
   const loadIdeas = useIdeaStore((s) => s.loadIdeas);
   const idea = useIdeaStore((s) => s.ideas.find((i) => i.id === id));
   const loaded = useIdeaStore((s) => s.ideas.length > 0 || !s.loading);
 
   useEffect(() => {
-    initAuth();
-    loadIdeas();
+    if (session?.user?.id) {
+      loadIdeas(session.user.id);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [session?.user?.id]);
 
-  if (!loaded) {
+  if (status === "loading" || !loaded) {
     return (
       <div className="flex items-center justify-center py-24">
         <Spinner size="lg" />

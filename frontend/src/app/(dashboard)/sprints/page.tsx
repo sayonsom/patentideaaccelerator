@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useTeamStore } from "@/lib/store";
-import { useAuthStore } from "@/lib/store";
 import { SPRINT_PHASES, SESSION_MODES } from "@/lib/constants";
 import { uid } from "@/lib/utils";
 import { Button, Card, Badge, EmptyState, Modal, Input } from "@/components/ui";
@@ -11,15 +11,16 @@ import { DEFAULT_TEAM_TIME_BUDGET_SECONDS } from "@/lib/team-timer";
 import type { Team, Member } from "@/lib/types";
 
 export default function SprintsPage() {
+  const { data: session } = useSession();
   const { teams, loadTeams, addTeam } = useTeamStore();
-  const initAuth = useAuthStore((s) => s.init);
   const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => {
-    initAuth();
-    loadTeams();
+    if (session?.user?.id) {
+      loadTeams(session.user.id);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [session?.user?.id]);
 
   return (
     <div>

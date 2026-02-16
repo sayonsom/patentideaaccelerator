@@ -1,21 +1,23 @@
 "use client";
 
 import { useEffect } from "react";
-import { useIdeaStore, useAuthStore } from "@/lib/store";
+import { useSession } from "next-auth/react";
+import { useIdeaStore } from "@/lib/store";
 
 /**
- * Hook that initializes ideas + auth on mount
+ * Hook that loads ideas for the authenticated user
  * and provides access to the idea store.
  */
 export function useIdeas() {
+  const { data: session } = useSession();
   const store = useIdeaStore();
-  const initAuth = useAuthStore((s) => s.init);
 
   useEffect(() => {
-    initAuth();
-    store.loadIdeas();
+    if (session?.user?.id) {
+      store.loadIdeas(session.user.id);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [session?.user?.id]);
 
   return {
     ideas: store.filteredIdeas(),

@@ -2,8 +2,9 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import type { Idea, FrameworkType, IdeaScore, GeneratedIdea, AliceScore } from "@/lib/types";
-import { useIdeaStore, useAuthStore } from "@/lib/store";
+import { useIdeaStore } from "@/lib/store";
 import { useAI } from "@/hooks/useAI";
 import { createBlankIdea } from "@/lib/utils";
 import { Button, Stepper, Input, Textarea, TagInput, Card, Spinner } from "@/components/ui";
@@ -37,12 +38,13 @@ const TECH_SUGGESTIONS = [
 
 export function IdeaWizard() {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
+  const { data: session } = useSession();
   const addIdea = useIdeaStore((s) => s.addIdea);
 
+  const userId = session?.user?.id ?? "anonymous";
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Partial<Idea>>(() => {
-    const blank = createBlankIdea(user?.id ?? "anonymous");
+    const blank = createBlankIdea(userId);
     return blank;
   });
 
@@ -58,8 +60,8 @@ export function IdeaWizard() {
     setStep((s) => Math.max(s - 1, 0));
   }
 
-  function save() {
-    const idea = addIdea(draft);
+  async function save() {
+    const idea = await addIdea(draft, userId);
     router.push(`/ideas/${idea.id}`);
   }
 

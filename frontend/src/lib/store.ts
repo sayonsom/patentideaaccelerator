@@ -3,44 +3,22 @@
 import { create } from "zustand";
 import type { Idea, IdeaStatus, Team, User } from "./types";
 import * as api from "./api";
-import { createBlankIdea, uid } from "./utils";
+import { createBlankIdea } from "./utils";
 
 // ─── Auth Store ───────────────────────────────────────────────────
+// User data now comes from NextAuth session, not localStorage.
+// The store holds it in memory for easy access in client components.
 
 interface AuthState {
   user: User | null;
-  init: () => void;
   setUser: (user: User) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  init: () => {
-    const user = api.getUser();
-    if (user) {
-      set({ user });
-    } else {
-      // Create a default local user for the localStorage-first approach
-      const defaultUser: User = {
-        id: uid(),
-        email: "",
-        name: "Local User",
-        interests: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      api.saveUser(defaultUser);
-      set({ user: defaultUser });
-    }
-  },
-  setUser: (user) => {
-    api.saveUser(user);
-    set({ user });
-  },
-  logout: () => {
-    set({ user: null });
-  },
+  setUser: (user) => set({ user }),
+  logout: () => set({ user: null }),
 }));
 
 // ─── Idea Store ───────────────────────────────────────────────────
@@ -53,11 +31,11 @@ interface IdeaState {
   sortBy: "updatedAt" | "createdAt" | "title";
   sortDir: "asc" | "desc";
 
-  // Actions
-  loadIdeas: () => void;
-  addIdea: (idea?: Partial<Idea>) => Idea;
-  updateIdea: (id: string, updates: Partial<Idea>) => void;
-  removeIdea: (id: string) => void;
+  // Actions (now async — backed by Prisma)
+  loadIdeas: (userId: string) => Promise<void>;
+  addIdea: (partial?: Partial<Idea>, userId?: string) => Promise<Idea>;
+  updateIdea: (id: string, updates: Partial<Idea>) => Promise<void>;
+  removeIdea: (id: string) => Promise<void>;
   setFilterStatus: (status: IdeaStatus | null) => void;
   setSearchQuery: (q: string) => void;
   setSortBy: (field: "updatedAt" | "createdAt" | "title") => void;
@@ -74,31 +52,35 @@ export const useIdeaStore = create<IdeaState>((set, get) => ({
   sortBy: "updatedAt",
   sortDir: "desc",
 
-  loadIdeas: () => {
+  loadIdeas: async (userId: string) => {
     set({ loading: true });
-    const ideas = api.listIdeas();
-    set({ ideas, loading: false });
+    try {
+      const ideas = await api.listIdeas(userId);
+      set({ ideas, loading: false });
+    } catch {
+      set({ loading: false });
+    }
   },
 
-  addIdea: (partial) => {
-    const user = useAuthStore.getState().user;
-    const blank = createBlankIdea(user?.id ?? "anonymous");
+  addIdea: async (partial, userId) => {
+    const uid = userId ?? useAuthStore.getState().user?.id ?? "anonymous";
+    const blank = createBlankIdea(uid);
     const idea: Idea = { ...blank, ...partial };
-    api.createIdea(idea);
-    set((s) => ({ ideas: [idea, ...s.ideas] }));
-    return idea;
+    const created = await api.createIdea(idea);
+    set((s) => ({ ideas: [created, ...s.ideas] }));
+    return created;
   },
 
-  updateIdea: (id, updates) => {
-    const updated = api.updateIdea(id, updates);
+  updateIdea: async (id, updates) => {
+    const updated = await api.updateIdea(id, updates);
     if (!updated) return;
     set((s) => ({
       ideas: s.ideas.map((i) => (i.id === id ? updated : i)),
     }));
   },
 
-  removeIdea: (id) => {
-    api.deleteIdea(id);
+  removeIdea: async (id) => {
+    await api.deleteIdea(id);
     set((s) => ({ ideas: s.ideas.filter((i) => i.id !== id) }));
   },
 
@@ -168,9 +150,9 @@ interface TeamState {
   teams: Team[];
   loading: boolean;
 
-  loadTeams: () => void;
+  loadTeams: (userId: string) => Promise<void>;
   addTeam: (team: Team) => void;
-  updateTeam: (id: string, updates: Partial<Team>) => void;
+  updateTeam: (id: string, updates: Partial<Team>) => Promise<void>;
   removeTeam: (id: string) => void;
   getTeam: (id: string) => Team | undefined;
 }
@@ -179,19 +161,22 @@ export const useTeamStore = create<TeamState>((set, get) => ({
   teams: [],
   loading: false,
 
-  loadTeams: () => {
+  loadTeams: async (userId: string) => {
     set({ loading: true });
-    const teams = api.listTeams();
-    set({ teams, loading: false });
+    try {
+      const teams = await api.listTeams(userId);
+      set({ teams, loading: false });
+    } catch {
+      set({ loading: false });
+    }
   },
 
   addTeam: (team) => {
-    api.createTeam(team);
     set((s) => ({ teams: [team, ...s.teams] }));
   },
 
-  updateTeam: (id, updates) => {
-    const updated = api.updateTeam(id, updates);
+  updateTeam: async (id, updates) => {
+    const updated = await api.updateTeam(id, updates);
     if (!updated) return;
     set((s) => ({
       teams: s.teams.map((t) => (t.id === id ? updated : t)),
@@ -199,7 +184,6 @@ export const useTeamStore = create<TeamState>((set, get) => ({
   },
 
   removeTeam: (id) => {
-    api.deleteTeam(id);
     set((s) => ({ teams: s.teams.filter((t) => t.id !== id) }));
   },
 
@@ -207,6 +191,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
 }));
 
 // ─── Settings Store ──────────────────────────────────────────────
+// Settings stay in localStorage — per-device, sensitive (API key).
 
 interface SettingsState {
   apiKey: string | null;
