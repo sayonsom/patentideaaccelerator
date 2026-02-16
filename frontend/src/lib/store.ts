@@ -205,3 +205,33 @@ export const useTeamStore = create<TeamState>((set, get) => ({
 
   getTeam: (id) => get().teams.find((t) => t.id === id),
 }));
+
+// ─── Settings Store ──────────────────────────────────────────────
+
+interface SettingsState {
+  apiKey: string | null;
+  init: () => void;
+  setApiKey: (key: string) => void;
+  clearApiKey: () => void;
+}
+
+export const useSettingsStore = create<SettingsState>((set) => ({
+  apiKey: null,
+
+  init: () => {
+    const settings = api.getSettings();
+    set({ apiKey: settings.anthropicApiKey || null });
+  },
+
+  setApiKey: (key) => {
+    const settings = api.getSettings();
+    api.saveSettings({ ...settings, anthropicApiKey: key });
+    set({ apiKey: key });
+  },
+
+  clearApiKey: () => {
+    const settings = api.getSettings();
+    api.saveSettings({ ...settings, anthropicApiKey: "" });
+    set({ apiKey: null });
+  },
+}));

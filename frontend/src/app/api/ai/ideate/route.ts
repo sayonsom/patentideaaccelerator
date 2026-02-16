@@ -28,7 +28,7 @@ Respond with valid JSON only, matching this schema:
 }`;
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY || req.headers.get("x-api-key");
   if (!apiKey) {
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY not configured" },

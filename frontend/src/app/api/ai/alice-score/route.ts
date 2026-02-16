@@ -25,7 +25,7 @@ Scoring guide:
 Be specific. Reference real Alice framework cases where applicable.`;
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY || req.headers.get("x-api-key");
   if (!apiKey) {
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY not configured" },

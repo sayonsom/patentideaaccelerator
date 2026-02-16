@@ -13,7 +13,14 @@ const STORAGE_KEYS = {
   user: "voltedge:user",
   sprints: "voltedge:sprints",
   teams: "voltedge:teams",
+  settings: "voltedge:settings",
 } as const;
+
+export interface AppSettings {
+  anthropicApiKey: string;
+}
+
+const DEFAULT_SETTINGS: AppSettings = { anthropicApiKey: "" };
 
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -174,4 +181,14 @@ export function deleteTeam(id: string): boolean {
   if (filtered.length === teams.length) return false;
   writeJSON(STORAGE_KEYS.teams, filtered);
   return true;
+}
+
+// ─── Settings ────────────────────────────────────────────────────
+
+export function getSettings(): AppSettings {
+  return readJSON<AppSettings>(STORAGE_KEYS.settings, DEFAULT_SETTINGS);
+}
+
+export function saveSettings(settings: AppSettings): void {
+  writeJSON(STORAGE_KEYS.settings, settings);
 }
