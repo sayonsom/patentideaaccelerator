@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useSession, signOut } from "next-auth/react";
 
 interface NavItem {
   href: string;
@@ -62,6 +63,7 @@ const NAV_ITEMS: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { data: session } = useSession();
 
   return (
     <aside
@@ -116,12 +118,40 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Bottom branding */}
-      {!collapsed && (
-        <div className="px-4 py-3 border-t border-border-default">
-          <p className="text-xs text-text-muted">VoltEdge v0.1</p>
-        </div>
-      )}
+      {/* User + Sign out */}
+      <div className="px-3 py-3 border-t border-border-default">
+        {session?.user ? (
+          <div className={`flex items-center ${collapsed ? "justify-center" : "gap-2"}`}>
+            {/* Avatar circle */}
+            <div className="w-7 h-7 rounded-full bg-accent-gold/20 text-accent-gold flex items-center justify-center text-xs font-bold shrink-0">
+              {(session.user.name?.[0] ?? session.user.email?.[0] ?? "U").toUpperCase()}
+            </div>
+            {!collapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-text-primary truncate">
+                  {session.user.name ?? "User"}
+                </p>
+                <p className="text-[10px] text-text-muted truncate">
+                  {session.user.email}
+                </p>
+              </div>
+            )}
+            {!collapsed && (
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="text-text-muted hover:text-red-400 transition-colors shrink-0"
+                title="Sign out"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                </svg>
+              </button>
+            )}
+          </div>
+        ) : (
+          !collapsed && <p className="text-xs text-text-muted">VoltEdge v0.1</p>
+        )}
+      </div>
     </aside>
   );
 }
