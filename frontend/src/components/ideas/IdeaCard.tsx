@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Idea } from "@/lib/types";
 import { Badge } from "@/components/ui";
-import { getTotalScore, getScoreVerdict, getStatusColor, timeAgo, truncate } from "@/lib/utils";
+import { getTotalScore, getScoreVerdict, getStatusColor, timeAgo, truncate, getIdeaProgress } from "@/lib/utils";
 
 interface IdeaCardProps {
   idea: Idea;
@@ -59,6 +59,8 @@ function ScoreMatrix({ idea }: { idea: Idea }) {
 export function IdeaCard({ idea }: IdeaCardProps) {
   const total = getTotalScore(idea.score);
   const verdict = idea.score ? getScoreVerdict(total) : null;
+
+  const progress = getIdeaProgress(idea);
 
   return (
     <Link href={`/ideas/${idea.id}`} className="block group">
@@ -128,6 +130,22 @@ export function IdeaCard({ idea }: IdeaCardProps) {
             {verdict.label} ({total}/9)
           </div>
         )}
+
+        {/* Pipeline progress bar */}
+        <div className="mt-2 flex items-center gap-2">
+          <div className="flex-1 h-1 bg-surface-deep rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${progress.percent}%`,
+                background: progress.percent >= 87 ? "#10b981" : progress.percent >= 50 ? "#f59e0b" : "#6B7280",
+              }}
+            />
+          </div>
+          <span className="text-[10px] text-text-muted shrink-0">
+            {progress.completed}/{progress.total}
+          </span>
+        </div>
       </div>
     </Link>
   );
