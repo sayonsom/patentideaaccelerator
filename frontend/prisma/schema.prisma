@@ -1,0 +1,124 @@
+// ═══════════════════════════════════════════════════════════════════
+// VoltEdge — Prisma Schema
+// ═══════════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users ─────────────────────────────────────────────────────────
+
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  name       String
+  cognitoSub String?  @unique @map("cognito_sub")
+  interests  Json     @default("[]")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  ideas              Idea[]
+  ownedSprints       Sprint[]
+  sprintMemberships  SprintMember[]
+
+  @@map("users")
+}
+
+// ─── Ideas ─────────────────────────────────────────────────────────
+
+model Idea {
+  id                    String   @id @default(uuid())
+  userId                String   @map("user_id")
+  sprintId              String?  @map("sprint_id")
+  title                 String   @default("")
+  problemStatement      String   @default("") @map("problem_statement")
+  existingApproach      String   @default("") @map("existing_approach")
+  proposedSolution      String   @default("") @map("proposed_solution")
+  technicalApproach     String   @default("") @map("technical_approach")
+  contradictionResolved String   @default("") @map("contradiction_resolved")
+  priorArtNotes         String   @default("") @map("prior_art_notes")
+  status                String   @default("draft")
+  phase                 String   @default("foundation")
+  techStack             Json     @default("[]") @map("tech_stack")
+  tags                  Json     @default("[]")
+
+  // 3x3 scoring (IdeaScore JSON)
+  score                 Json?    @db.JsonB
+
+  // Alice/101 scoring (AliceScore JSON)
+  aliceScore            Json?    @map("alice_score") @db.JsonB
+
+  // Framework
+  frameworkUsed         String   @default("none") @map("framework_used")
+  frameworkData         Json     @default("{}") @map("framework_data") @db.JsonB
+
+  // Claims (ClaimDraft JSON)
+  claimDraft            Json?    @map("claim_draft") @db.JsonB
+
+  // Red team
+  redTeamNotes          String   @default("") @map("red_team_notes")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sprint                Sprint?  @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  priorArtSearches      PriorArtResult[]
+
+  @@map("ideas")
+}
+
+// ─── Sprints ───────────────────────────────────────────────────────
+
+model Sprint {
+  id                    String    @id @default(uuid())
+  name                  String
+  ownerId               String    @map("owner_id")
+  status                String    @default("active")
+  sessionMode           String    @default("quantity") @map("session_mode")
+  phase                 String    @default("foundation")
+  timerSecondsRemaining Int       @default(259200) @map("timer_seconds_remaining")
+  timerRunning          Boolean   @default(false) @map("timer_running")
+  startedAt             DateTime? @map("started_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  owner                 User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ideas                 Idea[]
+  members               SprintMember[]
+
+  @@map("sprints")
+}
+
+// ─── Sprint Members ────────────────────────────────────────────────
+
+model SprintMember {
+  sprintId String @map("sprint_id")
+  userId   String @map("user_id")
+  role     String @default("member")
+
+  sprint   Sprint @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([sprintId, userId])
+  @@map("sprint_members")
+}
+
+// ─── Prior Art Results ─────────────────────────────────────────────
+
+model PriorArtResult {
+  id         String   @id @default(uuid())
+  ideaId     String   @map("idea_id")
+  queryText  String   @map("query_text")
+  results    Json     @db.JsonB
+  searchedAt DateTime @default(now()) @map("searched_at")
+
+  idea       Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@map("prior_art_results")
+}
