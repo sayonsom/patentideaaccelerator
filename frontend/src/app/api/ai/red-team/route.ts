@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import Anthropic from "@anthropic-ai/sdk";
 
 const SYSTEM_PROMPT = `You are a senior patent examiner and engineering critic. Your role is to find every possible weakness in a proposed software patent idea.
@@ -20,6 +22,11 @@ Respond with valid JSON matching this schema:
 }`;
 
 export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY || req.headers.get("x-api-key");
   if (!apiKey) {
     return NextResponse.json(

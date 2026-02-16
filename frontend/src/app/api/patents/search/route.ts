@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 const NAMED_ENTITIES: Record<string, string> = {
   amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'", hellip: "\u2026", nbsp: " ",
@@ -23,6 +25,11 @@ function decodeEntities(str: string): string {
 const SOFTWARE_CPC_CLASSES = ["G06F", "G06N", "H04L", "G06Q", "G06T", "H04W"];
 
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") || "").trim();
   const cpcFilter = searchParams.get("cpc")?.split(",").filter(Boolean) ?? [];
