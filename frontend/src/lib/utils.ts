@@ -84,6 +84,7 @@ export function createBlankIdea(userId: string): {
   frameworkData: Record<string, never>;
   claimDraft: null;
   redTeamNotes: string;
+  alignmentScores: never[];
   createdAt: string;
   updatedAt: string;
 } {
@@ -109,6 +110,7 @@ export function createBlankIdea(userId: string): {
     frameworkData: {},
     claimDraft: null,
     redTeamNotes: "",
+    alignmentScores: [],
     createdAt: now,
     updatedAt: now,
   };

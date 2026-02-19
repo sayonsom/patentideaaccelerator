@@ -29,6 +29,7 @@ function mapPrismaIdeaToIdea(row: PrismaIdea): Idea {
     frameworkData: (row.frameworkData as Idea["frameworkData"]) ?? {},
     claimDraft: row.claimDraft as Idea["claimDraft"],
     redTeamNotes: row.redTeamNotes,
+    alignmentScores: [],
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

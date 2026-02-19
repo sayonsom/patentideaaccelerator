@@ -1,13 +1,27 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import type { Idea, IdeaScore, AliceScore, ClaimDraft, FrameworkData, IdeaStatus, IdeaPhase, FrameworkType } from "@/lib/types";
+import type { Idea, IdeaScore, AliceScore, ClaimDraft, FrameworkData, IdeaStatus, IdeaPhase, FrameworkType, AlignmentScore } from "@/lib/types";
 import { Prisma } from "@prisma/client";
-import type { Idea as PrismaIdea } from "@prisma/client";
+import type { Idea as PrismaIdea, AlignmentScore as PrismaAlignmentScore } from "@prisma/client";
 
 // ─── Prisma ↔ App Type Mappers ──────────────────────────────────
 
-function mapPrismaToIdea(row: PrismaIdea): Idea {
+type PrismaIdeaWithScores = PrismaIdea & {
+  alignmentScores?: PrismaAlignmentScore[];
+};
+
+function mapAlignmentScore(row: PrismaAlignmentScore): AlignmentScore {
+  return {
+    id: row.id,
+    ideaId: row.ideaId,
+    goalId: row.goalId,
+    score: row.score,
+    rationale: row.rationale,
+  };
+}
+
+function mapPrismaToIdea(row: PrismaIdeaWithScores): Idea {
   return {
     id: row.id,
     userId: row.userId,
@@ -29,6 +43,7 @@ function mapPrismaToIdea(row: PrismaIdea): Idea {
     frameworkData: (row.frameworkData as FrameworkData) ?? {},
     claimDraft: row.claimDraft as ClaimDraft | null,
     redTeamNotes: row.redTeamNotes,
+    alignmentScores: (row.alignmentScores ?? []).map(mapAlignmentScore),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -88,12 +103,16 @@ export async function listIdeasAction(userId: string): Promise<Idea[]> {
   const rows = await prisma.idea.findMany({
     where: { userId },
     orderBy: { updatedAt: "desc" },
+    include: { alignmentScores: true },
   });
   return rows.map(mapPrismaToIdea);
 }
 
 export async function getIdeaAction(id: string): Promise<Idea | null> {
-  const row = await prisma.idea.findUnique({ where: { id } });
+  const row = await prisma.idea.findUnique({
+    where: { id },
+    include: { alignmentScores: true },
+  });
   return row ? mapPrismaToIdea(row) : null;
 }
 
@@ -148,6 +167,7 @@ export async function filterIdeasAction(
   const rows = await prisma.idea.findMany({
     where,
     orderBy: { [opts.sortBy ?? "updatedAt"]: opts.sortDir ?? "desc" },
+    include: { alignmentScores: true },
   });
   return rows.map(mapPrismaToIdea);
 }

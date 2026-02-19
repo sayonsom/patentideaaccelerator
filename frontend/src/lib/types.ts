@@ -106,8 +106,34 @@ export interface Idea {
   // Red team
   redTeamNotes: string;
 
+  // Business alignment
+  alignmentScores: AlignmentScore[];
+
   createdAt: string;
   updatedAt: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Business Alignment Types
+// ═══════════════════════════════════════════════════════════════════
+
+export interface BusinessGoal {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  color: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AlignmentScore {
+  id: string;
+  ideaId: string;
+  goalId: string;
+  score: number;    // 0-10
+  rationale: string;
 }
 
 // ═══════════════════════════════════════════════════════════════════

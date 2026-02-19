@@ -58,6 +58,7 @@ export function SprintBoard({ team, onUpdateTeam, onBack }: SprintBoardProps) {
       claimDraft: null,
       tags: [],
       techStack: [],
+      alignmentScores: [],
       createdAt: new Date(nowMs).toISOString(),
       updatedAt: new Date(nowMs).toISOString(),
     };

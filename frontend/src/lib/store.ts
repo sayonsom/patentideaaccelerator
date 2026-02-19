@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { Idea, IdeaStatus, Team, User } from "./types";
+import type { Idea, IdeaStatus, Team, User, BusinessGoal } from "./types";
 import * as api from "./api";
 import { createBlankIdea } from "./utils";
 
@@ -188,6 +188,52 @@ export const useTeamStore = create<TeamState>((set, get) => ({
   },
 
   getTeam: (id) => get().teams.find((t) => t.id === id),
+}));
+
+// ─── Goal Store (Business Alignment) ────────────────────────────
+
+interface GoalState {
+  goals: BusinessGoal[];
+  loading: boolean;
+
+  loadGoals: (userId: string) => Promise<void>;
+  addGoal: (data: { userId: string; title: string; description?: string; color?: string }) => Promise<BusinessGoal>;
+  updateGoal: (id: string, updates: Partial<Pick<BusinessGoal, "title" | "description" | "color" | "sortOrder">>) => Promise<void>;
+  removeGoal: (id: string) => Promise<void>;
+}
+
+export const useGoalStore = create<GoalState>((set) => ({
+  goals: [],
+  loading: false,
+
+  loadGoals: async (userId: string) => {
+    set({ loading: true });
+    try {
+      const goals = await api.listGoals(userId);
+      set({ goals, loading: false });
+    } catch {
+      set({ loading: false });
+    }
+  },
+
+  addGoal: async (data) => {
+    const created = await api.createGoal(data);
+    set((s) => ({ goals: [...s.goals, created] }));
+    return created;
+  },
+
+  updateGoal: async (id, updates) => {
+    const updated = await api.updateGoal(id, updates);
+    if (!updated) return;
+    set((s) => ({
+      goals: s.goals.map((g) => (g.id === id ? updated : g)),
+    }));
+  },
+
+  removeGoal: async (id) => {
+    await api.deleteGoal(id);
+    set((s) => ({ goals: s.goals.filter((g) => g.id !== id) }));
+  },
 }));
 
 // ─── Settings Store ──────────────────────────────────────────────

@@ -5,7 +5,7 @@
  * Settings remain in localStorage (per-device, sensitive).
  */
 
-import type { Idea, Sprint, Team, User, IdeaStatus } from "./types";
+import type { Idea, Sprint, Team, User, IdeaStatus, BusinessGoal, AlignmentScore } from "./types";
 import {
   listIdeasAction,
   getIdeaAction,
@@ -30,6 +30,14 @@ import {
   updateTeamAction,
   listTeamsForUser,
 } from "./actions/teams";
+import {
+  listGoalsAction,
+  createGoalAction,
+  updateGoalAction,
+  deleteGoalAction,
+  scoreIdeaAlignmentAction,
+  batchScoreAlignmentAction,
+} from "./actions/goals";
 
 // ─── Settings (localStorage — per device) ───────────────────────
 
@@ -155,4 +163,48 @@ export async function updateTeam(
   updates: Partial<Pick<Team, "name" | "sessionMode" | "sprintPhase" | "dataMinister">>
 ): Promise<Team | null> {
   return updateTeamAction(sprintId, updates);
+}
+
+// ─── Business Goals (Prisma) ───────────────────────────────────
+
+export async function listGoals(userId: string): Promise<BusinessGoal[]> {
+  return listGoalsAction(userId);
+}
+
+export async function createGoal(data: {
+  userId: string;
+  title: string;
+  description?: string;
+  color?: string;
+}): Promise<BusinessGoal> {
+  return createGoalAction(data);
+}
+
+export async function updateGoal(
+  id: string,
+  updates: Partial<Pick<BusinessGoal, "title" | "description" | "color" | "sortOrder">>
+): Promise<BusinessGoal | null> {
+  return updateGoalAction(id, updates);
+}
+
+export async function deleteGoal(id: string): Promise<boolean> {
+  return deleteGoalAction(id);
+}
+
+// ─── Alignment Scoring (Prisma) ────────────────────────────────
+
+export async function scoreAlignment(
+  ideaId: string,
+  goalId: string,
+  score: number,
+  rationale: string
+): Promise<AlignmentScore> {
+  return scoreIdeaAlignmentAction(ideaId, goalId, score, rationale);
+}
+
+export async function batchScoreAlignment(
+  ideaId: string,
+  scores: { goalId: string; score: number; rationale: string }[]
+): Promise<AlignmentScore[]> {
+  return batchScoreAlignmentAction(ideaId, scores);
 }

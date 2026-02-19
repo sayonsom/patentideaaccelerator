@@ -25,6 +25,7 @@ model User {
   ideas              Idea[]
   ownedSprints       Sprint[]
   sprintMemberships  SprintMember[]
+  businessGoals      BusinessGoal[]
 
   @@map("users")
 }
@@ -69,6 +70,7 @@ model Idea {
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   sprint                Sprint?  @relation(fields: [sprintId], references: [id], onDelete: SetNull)
   priorArtSearches      PriorArtResult[]
+  alignmentScores       AlignmentScore[]
 
   @@map("ideas")
 }
@@ -121,4 +123,38 @@ model PriorArtResult {
   idea       Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
 
   @@map("prior_art_results")
+}
+
+// ─── Business Goals ──────────────────────────────────────────────
+
+model BusinessGoal {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  title       String
+  description String   @default("")
+  color       String   @default("#4F83CC")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alignmentScores  AlignmentScore[]
+
+  @@map("business_goals")
+}
+
+// ─── Alignment Scores (Idea × Goal) ─────────────────────────────
+
+model AlignmentScore {
+  id        String @id @default(uuid())
+  ideaId    String @map("idea_id")
+  goalId    String @map("goal_id")
+  score     Int    @default(0)
+  rationale String @default("")
+
+  idea Idea         @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  goal BusinessGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@unique([ideaId, goalId])
+  @@map("alignment_scores")
 }
