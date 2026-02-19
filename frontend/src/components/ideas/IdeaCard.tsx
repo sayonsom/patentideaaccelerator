@@ -102,6 +102,15 @@ export function IdeaCard({ idea }: IdeaCardProps) {
           </div>
         )}
 
+        {/* Alignment score badge */}
+        {idea.alignmentScores.length > 0 && (
+          <div className="mb-3">
+            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-900/30 text-blue-400">
+              Align: {(idea.alignmentScores.reduce((s, a) => s + a.score, 0) / idea.alignmentScores.length).toFixed(1)}/10
+            </span>
+          </div>
+        )}
+
         {/* Framework tag */}
         {idea.frameworkUsed !== "none" && (
           <Badge variant="outline" className="mb-3 text-xs">

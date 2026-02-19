@@ -6,6 +6,7 @@ export const config = {
     "/sprints/:path*",
     "/frameworks/:path*",
     "/prior-art/:path*",
+    "/alignment/:path*",
     "/settings/:path*",
   ],
 };

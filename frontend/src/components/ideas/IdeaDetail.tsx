@@ -8,6 +8,7 @@ import { useAI } from "@/hooks/useAI";
 import { usePriorArt } from "@/hooks/usePriorArt";
 import { Button, Tabs, TabPanel, Input, Textarea, Badge, Card, TagInput, Modal, Spinner } from "@/components/ui";
 import { ScoreMatrix } from "./ScoreMatrix";
+import { AlignmentPanel } from "./AlignmentPanel";
 import { PipelineProgress } from "./PipelineProgress";
 import { AIRefineButton } from "./AIRefineButton";
 import { ClaimDraftDisplay } from "./ClaimDraft";
@@ -166,6 +167,9 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
         ) : (
           <AliceCheckButton idea={idea} update={update} />
         )}
+
+        {/* Business Alignment */}
+        <AlignmentPanel idea={idea} />
 
         {/* Status */}
         <Card>
