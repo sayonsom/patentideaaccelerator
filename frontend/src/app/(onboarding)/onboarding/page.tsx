@@ -236,13 +236,13 @@ function OnboardingContent() {
           const teamResult = await redeemTeamInvite(inviteFromUrl, session.user.id);
           if (teamResult.success && teamResult.teamId) {
             await updateSession();
-            router.push(`/teams/${teamResult.teamId}`);
+            window.location.href = `/teams/${teamResult.teamId}`;
             return;
           }
           const orgResult = await redeemOrgInvite(inviteFromUrl, session.user.id);
           if (orgResult.success) {
             await updateSession();
-            router.push("/teams");
+            window.location.href = "/teams";
             return;
           }
         } catch {
@@ -250,15 +250,12 @@ function OnboardingContent() {
         }
       }
 
-      // Update the session so middleware knows onboarding is complete
+      // Full page reload so the browser picks up the fresh JWT cookie.
+      // router.push() uses client-side navigation which can race with
+      // the cookie update from updateSession(), causing middleware to
+      // still see the old onboardingComplete=false JWT.
       await updateSession();
-      router.push(destination);
-
-      // Safety net: if we're still on this page after 5s (e.g. redirect loop),
-      // reset the saving state so the user isn't stuck on a spinner.
-      setTimeout(() => {
-        setSaving(false);
-      }, 5000);
+      window.location.href = destination;
     } catch (err) {
       setSaving(false);
       setError(
