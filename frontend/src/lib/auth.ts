@@ -186,7 +186,7 @@ export const authOptions: NextAuthOptions = {
     /**
      * Attach database user ID + RBAC data to the JWT.
      */
-    async jwt({ token, account, user }) {
+    async jwt({ token, account, user, trigger }) {
       // Credentials provider — user.id IS the database UUID
       if (account?.provider === "credentials" && user) {
         token.dbUserId = user.id;
@@ -206,6 +206,13 @@ export const authOptions: NextAuthOptions = {
         if (dbUser) {
           token.dbUserId = dbUser.id;
         }
+      }
+
+      // When updateSession() is called from client, force-refresh RBAC
+      // data from DB. This is critical on serverless (Vercel) where
+      // in-memory cache invalidation doesn't cross Lambda boundaries.
+      if (trigger === "update" && token.dbUserId) {
+        invalidateRbacCache(token.dbUserId as string);
       }
 
       // Embed RBAC data into JWT
