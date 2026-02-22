@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button, Input, Spinner } from "@/components/ui";
 import { INTEREST_CATEGORIES, ALL_INTERESTS } from "@/lib/constants";
 import { completeOnboarding, acceptTerms } from "@/lib/actions/users";
@@ -181,7 +181,6 @@ function InterestPicker({
 
 function OnboardingContent() {
   const { data: session, update: updateSession } = useSession();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const inviteFromUrl = searchParams.get("invite") ?? "";
 
