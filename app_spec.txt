@@ -1456,5 +1456,187 @@ B.4 Features to Borrow (adapted for engineer audience)
   Google Patents links          Already planned in prior art         Phase 1
 
 ================================================================================
+C. UI POLISH AUDIT — World-Class SaaS Standards (Feb 2026)
+================================================================================
+
+Reviewed every page of the app as a senior UI designer. These are the required
+improvements for production readiness. Zero regressions.
+
+-------------------------------------------------------------------------------
+C.1 Global / Systemic Fixes
+-------------------------------------------------------------------------------
+
+  FIX                           FILE(S)                          STATUS
+  ─────────────────────────────────────────────────────────────────────────────
+  Sidebar: group nav items      Sidebar.tsx                      Required
+  into semantic sections        (Core / Tools / Collaborate)
+  with dividers & labels        + clear separator above user
+  ─────────────────────────────────────────────────────────────────────────────
+  TopBar: fix breadcrumb        TopBar.tsx                       Required
+  casing (lowercase slug vs     Add all routes to
+  Title Case inconsistency)     BREADCRUMB_LABELS
+  ─────────────────────────────────────────────────────────────────────────────
+  TopBar: make primary CTA      TopBar.tsx                       Required
+  context-aware (show page-     Show "+ New Sprint" on
+  relevant action, not          /sprints, "Save Changes" on
+  always "+ New Idea")          /settings, etc.
+  ─────────────────────────────────────────────────────────────────────────────
+  Chat widget: show on ALL      DashboardShell.tsx or            Required
+  dashboard pages or NONE       ChatPanel mount point
+  ─────────────────────────────────────────────────────────────────────────────
+
+-------------------------------------------------------------------------------
+C.2 Auth Pages (Login / Signup / Forgot Password)
+-------------------------------------------------------------------------------
+
+  FIX                           FILE(S)                          STATUS
+  ─────────────────────────────────────────────────────────────────────────────
+  Button color: change from     login/page.tsx                   Required
+  washed-out lavender to        signup/page.tsx
+  solid brand blue              forgot-password/page.tsx
+  (#2251FF / bg-blue-ribbon)
+  ─────────────────────────────────────────────────────────────────────────────
+  SSO button label: rename      login/page.tsx                   Required
+  "SSO (Cognito)" to just       signup/page.tsx
+  "Single Sign-On" — hide
+  implementation detail
+  ─────────────────────────────────────────────────────────────────────────────
+  Form spacing: increase        login/page.tsx                   Required
+  gap between form fields
+  from space-y-3 to space-y-4
+  ─────────────────────────────────────────────────────────────────────────────
+
+-------------------------------------------------------------------------------
+C.3 Ideas Page + New Idea Wizard
+-------------------------------------------------------------------------------
+
+  FIX                           FILE(S)                          STATUS
+  ─────────────────────────────────────────────────────────────────────────────
+  Remove duplicate              ideas/page.tsx                   Required
+  "+ New Idea" button           (keep only in-page button)
+  ─────────────────────────────────────────────────────────────────────────────
+  Stepper label truncation:     Stepper.tsx                      Required
+  ensure "Alice Check" not      IdeaWizard.tsx
+  "Alice Ch..." — use shorter
+  labels or responsive text
+  ─────────────────────────────────────────────────────────────────────────────
+  Stepper progress bar:         IdeaWizard.tsx                   Required
+  change green to brand blue
+  ─────────────────────────────────────────────────────────────────────────────
+  "Back" button: give it a      IdeaWizard.tsx                   Required
+  ghost button style, not
+  plain disabled-looking text
+  ─────────────────────────────────────────────────────────────────────────────
+
+-------------------------------------------------------------------------------
+C.4 Frameworks Page
+-------------------------------------------------------------------------------
+
+  FIX                           FILE(S)                          STATUS
+  ─────────────────────────────────────────────────────────────────────────────
+  AI Coach / Coach buttons:     SITWorksheet.tsx                 Required
+  make visually prominent       TRIZWorksheet.tsx
+  (icon + button style)         FMEAInversion.tsx
+  instead of invisible text     CKWorksheet.tsx
+  links
+  ─────────────────────────────────────────────────────────────────────────────
+  Tab row: add bottom border    frameworks/page.tsx              Required
+  to full tab bar for visual
+  grounding
+  ─────────────────────────────────────────────────────────────────────────────
+  FMEA severity slider:         FMEAInversion.tsx                Required
+  custom-styled to match
+  design system
+  ─────────────────────────────────────────────────────────────────────────────
+
+-------------------------------------------------------------------------------
+C.5 Prior Art Page
+-------------------------------------------------------------------------------
+
+  FIX                           FILE(S)                          STATUS
+  ─────────────────────────────────────────────────────────────────────────────
+  CPC filter tags: add          prior-art/page.tsx               Required
+  toggle selected/unselected    SearchForm.tsx
+  visual states
+  ─────────────────────────────────────────────────────────────────────────────
+
+-------------------------------------------------------------------------------
+C.6 Empty States (Portfolio, Landscaping, Ideas)
+-------------------------------------------------------------------------------
+
+  FIX                           FILE(S)                          STATUS
+  ─────────────────────────────────────────────────────────────────────────────
+  Add value-prop context to     portfolio/page.tsx               Required
+  empty states. Explain WHY     landscaping/page.tsx
+  the feature matters, not      ideas/page.tsx
+  just "No X yet."
+  ─────────────────────────────────────────────────────────────────────────────
+
+-------------------------------------------------------------------------------
+C.7 Settings Page
+-------------------------------------------------------------------------------
+
+  FIX                           FILE(S)                          STATUS
+  ─────────────────────────────────────────────────────────────────────────────
+  Content width: center or      settings/page.tsx                Required
+  make full-width (not left-
+  hugging 60%)
+  ─────────────────────────────────────────────────────────────────────────────
+  Sticky save bar: add          settings/page.tsx                Required
+  bottom-fixed save button
+  so users don't scroll up
+  ─────────────────────────────────────────────────────────────────────────────
+  Red dots on AI providers:     settings/page.tsx                Required
+  add "Not configured" label
+  next to status dots
+  ─────────────────────────────────────────────────────────────────────────────
+
+-------------------------------------------------------------------------------
+C.8 Alignment Page
+-------------------------------------------------------------------------------
+
+  FIX                           FILE(S)                          STATUS
+  ─────────────────────────────────────────────────────────────────────────────
+  Add interaction hint to       alignment/page.tsx               Required
+  matrix: "Click a cell to
+  rate alignment"
+  ─────────────────────────────────────────────────────────────────────────────
+
+-------------------------------------------------------------------------------
+C.9 Sprints Page
+-------------------------------------------------------------------------------
+
+  FIX                           FILE(S)                          STATUS
+  ─────────────────────────────────────────────────────────────────────────────
+  Warning triangle: add         sprints/page.tsx                 Required
+  tooltip explaining what it
+  means
+  ─────────────────────────────────────────────────────────────────────────────
+
+-------------------------------------------------------------------------------
+C.10 Teams Page
+-------------------------------------------------------------------------------
+
+  FIX                           FILE(S)                          STATUS
+  ─────────────────────────────────────────────────────────────────────────────
+  "Join Team" button: give      teams/page.tsx                   Required
+  equal visual weight to
+  "Create Team" button
+  ─────────────────────────────────────────────────────────────────────────────
+
+-------------------------------------------------------------------------------
+C.11 Landing Page
+-------------------------------------------------------------------------------
+
+  FIX                           FILE(S)                          STATUS
+  ─────────────────────────────────────────────────────────────────────────────
+  Footer copyright year:        app/page.tsx                     Required
+  use dynamic year (2026)
+  ─────────────────────────────────────────────────────────────────────────────
+  "0" stat: rephrase to make    app/page.tsx                     Required
+  it feel intentional
+  ─────────────────────────────────────────────────────────────────────────────
+
+================================================================================
 END OF SPEC
 ================================================================================

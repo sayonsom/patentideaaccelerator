@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Spinner, EmptyState } from "@/components/ui";
 import { LandscapingWizard } from "@/components/landscaping/LandscapingWizard";
 import { LandscapeResults } from "@/components/landscaping/LandscapeResults";
-import { ChatPanel, ChatToggleButton } from "@/components/chat/ChatPanel";
-import type { LandscapingSession, ChatContext } from "@/lib/types";
+import type { LandscapingSession } from "@/lib/types";
 import {
   listLandscapingSessionsAction,
   createLandscapingSessionAction,
@@ -65,20 +64,6 @@ export default function LandscapingPage() {
       setActiveSession(updated);
     }
   };
-
-  const chatContext: ChatContext = useMemo(
-    () => ({
-      type: "landscaping",
-      id: activeSession?.id ?? null,
-      label: activeSession?.name ?? "Patent Landscaping",
-      data: {
-        techDescription: activeSession?.techDescription,
-        taxonomy: activeSession?.taxonomy,
-        patentCount: activeSession?.patents?.length ?? 0,
-      },
-    }),
-    [activeSession]
-  );
 
   if (status === "loading" || loading) {
     return (
@@ -194,12 +179,10 @@ export default function LandscapingPage() {
             </svg>
           }
           title="No landscaping sessions"
-          description='Create a new session to analyze patent landscapes in any technology area. Click "+ New Session" to begin.'
+          description='Map the competitive patent landscape before you file. Identify whitespace opportunities and avoid wasted legal spend. Click "+ New Session" to begin.'
         />
       ) : null}
 
-      <ChatToggleButton context={chatContext} />
-      <ChatPanel context={chatContext} />
     </div>
   );
 }

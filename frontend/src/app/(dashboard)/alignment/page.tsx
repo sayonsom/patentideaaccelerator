@@ -172,7 +172,8 @@ export default function AlignmentPage() {
           {/* Alignment Matrix */}
           {ideas.length > 0 && goals.length > 0 && (
             <div>
-              <h2 className="text-lg font-medium text-ink mb-4">Alignment Matrix</h2>
+              <h2 className="text-lg font-medium text-ink mb-1">Alignment Matrix</h2>
+              <p className="text-sm text-text-secondary mb-3">Click a cell to rate how well each idea aligns with your business goals.</p>
               <div className="overflow-x-auto rounded-lg border border-border">
                 <table className="w-full text-xs">
                   <thead>
@@ -197,7 +198,7 @@ export default function AlignmentPage() {
                     {scoredIdeas.map(({ idea, aggregate }) => (
                       <tr key={idea.id} className="border-t border-border hover:bg-neutral-off-white/50">
                         <td className="px-3 py-2 sticky left-0 bg-white">
-                          <Link href={`/ideas/${idea.id}`} className="text-ink hover:text-blue-ribbon font-normal truncate block max-w-[200px]">
+                          <Link href={`/ideas/${idea.id}`} className="text-ink hover:text-blue-ribbon font-normal truncate block max-w-[200px]" title={idea.title || "Untitled"}>
                             {idea.title || "Untitled"}
                           </Link>
                         </td>

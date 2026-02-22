@@ -14,6 +14,11 @@ const BREADCRUMB_LABELS: Record<string, string> = {
   teams: "Teams",
   admin: "Admin",
   alignment: "Alignment",
+  portfolio: "Portfolio",
+  landscaping: "Landscaping",
+  members: "Members",
+  goals: "Goals",
+  join: "Join Team",
 };
 
 function isUUID(s: string): boolean {
@@ -55,17 +60,30 @@ export function TopBar() {
         })}
       </nav>
 
-      {/* Actions */}
+      {/* Context-aware primary action */}
       <div className="flex items-center gap-3">
-        <Link
-          href="/ideas/new"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-ribbon text-white text-sm font-medium hover:bg-accent-hover transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          New Idea
-        </Link>
+        {(() => {
+          const base = "/" + segments[0];
+          // Only show CTA on pages where it makes contextual sense
+          if (base === "/settings" || base === "/admin" || base === "/alignment") return null;
+          const cta = {
+            "/sprints": { href: "/sprints", label: "New Sprint" },
+            "/teams": { href: "/teams/new", label: "Create Team" },
+            "/portfolio": { href: "/portfolio", label: "New Portfolio" },
+            "/landscaping": { href: "/landscaping", label: "New Session" },
+          }[base] ?? { href: "/ideas/new", label: "New Idea" };
+          return (
+            <Link
+              href={cta.href}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-ribbon text-white text-sm font-medium hover:bg-accent-hover transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              {cta.label}
+            </Link>
+          );
+        })()}
       </div>
     </header>
   );

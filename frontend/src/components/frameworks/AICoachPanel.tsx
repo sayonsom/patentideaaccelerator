@@ -22,20 +22,22 @@ export function AICoachPanel({
   onCoach,
   onClear,
   buttonLabel = "AI Coach",
-  compact = false,
 }: AICoachPanelProps) {
   // ─── Trigger button only (no coaching yet) ──────────────────
   if (!coaching && !loading && !error) {
     return (
-      <Button
-        variant="ghost"
-        size={compact ? "sm" : "md"}
+      <button
+        type="button"
         onClick={onCoach}
         disabled={loading}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent-light text-blue-ribbon text-sm font-medium hover:bg-blue-ribbon/15 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <span className="mr-1.5">&#x2728;</span>
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L14.09 8.26L20 9.27L15.55 13.97L16.91 20L12 16.9L7.09 20L8.45 13.97L4 9.27L9.91 8.26L12 2Z" fill="currentColor" opacity="0.9"/>
+          <path d="M12 2L14.09 8.26L20 9.27L15.55 13.97L16.91 20L12 16.9L7.09 20L8.45 13.97L4 9.27L9.91 8.26L12 2Z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
         {buttonLabel}
-      </Button>
+      </button>
     );
   }
 
@@ -131,9 +133,17 @@ export function AICoachPanel({
 
         {/* Coach again button */}
         <div className="pt-1">
-          <Button variant="ghost" size="sm" onClick={onCoach}>
-            <span className="mr-1.5">&#x2728;</span> Coach Me Again
-          </Button>
+          <button
+            type="button"
+            onClick={onCoach}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent-light text-blue-ribbon text-sm font-medium hover:bg-blue-ribbon/15 transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L14.09 8.26L20 9.27L15.55 13.97L16.91 20L12 16.9L7.09 20L8.45 13.97L4 9.27L9.91 8.26L12 2Z" fill="currentColor" opacity="0.9"/>
+              <path d="M12 2L14.09 8.26L20 9.27L15.55 13.97L16.91 20L12 16.9L7.09 20L8.45 13.97L4 9.27L9.91 8.26L12 2Z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            </svg>
+            Coach Me Again
+          </button>
         </div>
       </div>
     </Card>

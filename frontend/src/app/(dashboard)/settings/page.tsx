@@ -201,15 +201,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <div>
+    <div className="pb-20">
+      <div className="max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-serif font-bold text-ink">Settings</h1>
-        <Button variant="accent" size="sm" onClick={handleSaveAll} disabled={saving}>
-          {saving ? <Spinner size="sm" /> : "Save Changes"}
-        </Button>
       </div>
 
-      <div className="grid gap-6 max-w-2xl">
+      <div className="grid gap-6">
         {/* Profile */}
         <Card>
           <h2 className="text-lg font-medium text-ink mb-4">Profile</h2>
@@ -252,12 +250,17 @@ export default function SettingsPage() {
                     <span className={`text-sm font-normal ${isActive ? "text-accent" : "text-ink"}`}>
                       {p.label}
                     </span>
-                    <div
-                      className={`w-2.5 h-2.5 rounded-full ${
-                        hasKey ? "bg-green-500" : "bg-red-500"
-                      }`}
-                      title={hasKey ? "Key configured" : "No key set"}
-                    />
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className={`w-2.5 h-2.5 rounded-full ${
+                          hasKey ? "bg-green-500" : "bg-red-500"
+                        }`}
+                        title={hasKey ? "Key configured" : "No key set"}
+                      />
+                      {!hasKey && (
+                        <span className="text-[10px] text-red-500 font-medium">Not configured</span>
+                      )}
+                    </div>
                   </div>
                   <p className="text-xs text-text-muted leading-relaxed">{p.description}</p>
                   {isActive && (
@@ -310,8 +313,8 @@ export default function SettingsPage() {
                           hasKey ? "bg-green-500" : "bg-red-500"
                         }`}
                       />
-                      <span className="text-xs text-text-secondary">
-                        {hasKey ? "Configured" : "Not set"}
+                      <span className={`text-xs ${hasKey ? "text-text-secondary" : "text-red-500"}`}>
+                        {hasKey ? "Configured" : "Not configured"}
                       </span>
                     </div>
                   </div>
@@ -597,6 +600,16 @@ export default function SettingsPage() {
             Your ideas and sprint data are stored in PostgreSQL. API keys are encrypted and stored securely in your account.
           </p>
         </Card>
+      </div>
+      </div>
+
+      {/* Sticky save bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/80">
+        <div className="max-w-3xl mx-auto flex items-center justify-end px-6 py-3">
+          <Button variant="accent" size="sm" onClick={handleSaveAll} disabled={saving}>
+            {saving ? <Spinner size="sm" /> : "Save Changes"}
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -192,60 +192,91 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Main nav links */}
-      <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
-        {MAIN_NAV.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
-            active={pathname.startsWith(item.href)}
-            collapsed={collapsed}
-          />
-        ))}
+      {/* Main nav links — grouped semantically */}
+      <nav className="flex-1 py-3 px-2 overflow-y-auto">
+        {/* Core */}
+        {!collapsed && (
+          <p className="px-3 pb-1 pt-1 text-[10px] font-medium text-neutral-light uppercase tracking-wider">
+            Core
+          </p>
+        )}
+        <div className="space-y-0.5">
+          {MAIN_NAV.filter((i) => i.href === "/ideas" || i.href === "/portfolio").map((item) => (
+            <NavLink key={item.href} item={item} active={pathname.startsWith(item.href)} collapsed={collapsed} />
+          ))}
+        </div>
+
+        {/* Tools */}
+        <div className="mt-5">
+          {!collapsed && (
+            <p className="px-3 pb-1 text-[10px] font-medium text-neutral-light uppercase tracking-wider">
+              Tools
+            </p>
+          )}
+          {collapsed && <div className="mx-2 my-2 h-px bg-border" />}
+          <div className="space-y-0.5">
+            {MAIN_NAV.filter((i) =>
+              ["/frameworks", "/prior-art", "/landscaping", "/alignment"].includes(i.href)
+            ).map((item) => (
+              <NavLink key={item.href} item={item} active={pathname.startsWith(item.href)} collapsed={collapsed} />
+            ))}
+          </div>
+        </div>
+
+        {/* Collaborate */}
+        <div className="mt-5">
+          {!collapsed && (
+            <p className="px-3 pb-1 text-[10px] font-medium text-neutral-light uppercase tracking-wider">
+              Collaborate
+            </p>
+          )}
+          {collapsed && <div className="mx-2 my-2 h-px bg-border" />}
+          <div className="space-y-0.5">
+            {MAIN_NAV.filter((i) => i.href === "/teams" || i.href === "/sprints").map((item) => (
+              <NavLink key={item.href} item={item} active={pathname.startsWith(item.href)} collapsed={collapsed} />
+            ))}
+          </div>
+        </div>
 
         {/* Admin section — only for business_admin */}
         {isAdmin && (
-          <>
-            <div className="pt-4 pb-1 px-3">
-              {!collapsed && (
-                <p className="text-[10px] font-normal text-neutral-light uppercase tracking-wider">
-                  Admin
-                </p>
-              )}
-              {collapsed && (
-                <div className="w-full h-px bg-border" />
-              )}
+          <div className="mt-5">
+            {!collapsed && (
+              <p className="px-3 pb-1 text-[10px] font-medium text-neutral-light uppercase tracking-wider">
+                Admin
+              </p>
+            )}
+            {collapsed && <div className="mx-2 my-2 h-px bg-border" />}
+            <div className="space-y-0.5">
+              {ADMIN_NAV.map((item) => (
+                <NavLink
+                  key={item.href}
+                  item={item}
+                  active={
+                    item.href === "/admin"
+                      ? pathname === "/admin"
+                      : pathname.startsWith(item.href)
+                  }
+                  collapsed={collapsed}
+                />
+              ))}
             </div>
-            {ADMIN_NAV.map((item) => (
-              <NavLink
-                key={item.href}
-                item={item}
-                active={
-                  item.href === "/admin"
-                    ? pathname === "/admin"
-                    : pathname.startsWith(item.href)
-                }
-                collapsed={collapsed}
-              />
-            ))}
-          </>
+          </div>
         )}
 
-        {/* Settings at the bottom of nav */}
-        <div className="pt-4">
-          {BOTTOM_NAV.map((item) => (
-            <NavLink
-              key={item.href}
-              item={item}
-              active={pathname.startsWith(item.href)}
-              collapsed={collapsed}
-            />
-          ))}
+        {/* Settings — separated at bottom of nav */}
+        <div className="mt-5">
+          {collapsed && <div className="mx-2 my-2 h-px bg-border" />}
+          <div className="space-y-0.5">
+            {BOTTOM_NAV.map((item) => (
+              <NavLink key={item.href} item={item} active={pathname.startsWith(item.href)} collapsed={collapsed} />
+            ))}
+          </div>
         </div>
       </nav>
 
       {/* User + Sign out */}
-      <div className="px-3 py-3 border-t border-border">
+      <div className="px-3 py-3 mt-2 border-t border-border">
         {session?.user ? (
           <div className={`flex items-center ${collapsed ? "justify-center" : "gap-2"}`}>
             <div className="w-7 h-7 rounded-full bg-accent-light text-blue-ribbon flex items-center justify-center text-xs font-normal shrink-0">
@@ -264,7 +295,7 @@ export function Sidebar() {
             {!collapsed && (
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className="text-neutral-light hover:text-danger transition-colors shrink-0"
+                className="p-1 rounded text-neutral-light hover:text-danger hover:bg-red-50 transition-colors shrink-0"
                 title="Sign out"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useSprintStore, useVoltEdgeTeamStore } from "@/lib/store";
 import { SESSION_MODES } from "@/lib/constants";
-import { Button, Card, Badge, EmptyState, Modal, Input, Textarea, Select } from "@/components/ui";
+import { Button, Card, EmptyState, Modal, Input, Textarea, Select } from "@/components/ui";
 import type { Sprint, TeamMemberRecord } from "@/lib/types";
 import { listTeamMembers } from "@/lib/actions/teams-management";
 
@@ -71,7 +71,7 @@ export default function SprintsPage() {
                 <div className="flex justify-between items-center mb-2">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-blue-ribbon text-lg">{"\u25B3"}</span>
+                      <span className="text-blue-ribbon text-lg" title="Sprint needs attention — check timer or team status">{"\u25B3"}</span>
                       <h3 className="text-base font-medium text-ink">{sprint.name}</h3>
                     </div>
                     {sprint.theme && (
@@ -79,8 +79,8 @@ export default function SprintsPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">{sprint.sessionMode}</Badge>
-                    <Badge variant="outline">{sprint.phase}</Badge>
+                    <SessionModeBadge mode={sprint.sessionMode} />
+                    <PhaseBadge phase={sprint.phase} />
                     <SprintStatusBadge status={sprint.status} />
                   </div>
                 </div>
@@ -103,6 +103,36 @@ export default function SprintsPage() {
         />
       )}
     </div>
+  );
+}
+
+// ─── Session Mode Badge ──────────────────────────────────────────
+
+function SessionModeBadge({ mode }: { mode: Sprint["sessionMode"] }) {
+  const colors: Record<Sprint["sessionMode"], string> = {
+    quantity: "bg-blue-50 text-blue-700 border-blue-200",
+    quality: "bg-purple-50 text-purple-700 border-purple-200",
+    destroy: "bg-red-50 text-red-700 border-red-200",
+  };
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${colors[mode] || "bg-gray-50 text-gray-600 border-gray-200"}`}>
+      {mode}
+    </span>
+  );
+}
+
+// ─── Phase Badge ─────────────────────────────────────────────────
+
+function PhaseBadge({ phase }: { phase: Sprint["phase"] }) {
+  const colors: Record<Sprint["phase"], string> = {
+    foundation: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    validation: "bg-orange-50 text-orange-700 border-orange-200",
+    filing: "bg-teal-50 text-teal-700 border-teal-200",
+  };
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${colors[phase] || "bg-gray-50 text-gray-600 border-gray-200"}`}>
+      {phase}
+    </span>
   );
 }
 

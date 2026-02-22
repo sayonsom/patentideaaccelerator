@@ -47,7 +47,7 @@ function LoginForm() {
         <p className="text-sm text-text-secondary mt-1">Sign in to your VoltEdge account</p>
       </div>
 
-      <form onSubmit={handleCredentialsSignIn} className="space-y-3">
+      <form onSubmit={handleCredentialsSignIn} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-xs font-normal text-text-secondary mb-1">
             Email
@@ -130,7 +130,7 @@ function LoginForm() {
         disabled={loading}
         className="w-full py-2.5 rounded-md border border-border text-ink font-normal text-sm hover:bg-neutral-off-white transition-colors disabled:opacity-60"
       >
-        Sign in with SSO (Cognito)
+        Sign in with Single Sign-On
       </button>
 
       <div className="mt-6 text-center">

@@ -18,7 +18,7 @@ const WIZARD_STEPS = [
   { id: "ai-assist", label: "AI Assist", optional: true },
   { id: "refine", label: "Refine" },
   { id: "alice", label: "Alice Check", optional: true },
-  { id: "review", label: "Review & Save" },
+  { id: "review", label: "Review" },
 ];
 
 const FRAMEWORK_OPTIONS: { value: FrameworkType; label: string; desc: string; icon: string }[] = [
@@ -193,7 +193,7 @@ export function IdeaWizard() {
 
       {/* Navigation */}
       <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
-        <Button variant="ghost" onClick={back} disabled={step === 0}>
+        <Button variant="ghost" onClick={back} disabled={step === 0} className="border border-border hover:bg-neutral-off-white transition-colors">
           Back
         </Button>
         <div className="flex gap-2">

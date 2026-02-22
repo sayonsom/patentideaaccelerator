@@ -77,7 +77,7 @@ function SignupForm() {
         </p>
       </div>
 
-      <form onSubmit={handleSignUp} className="space-y-3">
+      <form onSubmit={handleSignUp} className="space-y-4">
         <div>
           <label htmlFor="name" className="block text-xs font-normal text-text-secondary mb-1">
             Full Name
@@ -155,7 +155,7 @@ function SignupForm() {
         disabled={loading}
         className="w-full py-2.5 rounded-md border border-border text-ink font-normal text-sm hover:bg-neutral-off-white transition-colors disabled:opacity-60"
       >
-        Sign up with SSO (Cognito)
+        Sign up with Single Sign-On
       </button>
 
       <div className="mt-6 text-center">

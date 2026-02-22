@@ -129,7 +129,7 @@ function TheGap() {
     { number: "60K+", label: "Software patents filed yearly in the US" },
     { number: "1973", label: "TRIZ was invented\u2014before software existed" },
     { number: "60%+", label: "Of software patents face Alice/101 rejections" },
-    { number: "0", label: "Tools built for how software teams actually invent" },
+    { number: "0", label: "Tools built for how software teams actually invent \u2014 until now." },
   ];
   return (
     <section className="py-20 px-6">
@@ -460,7 +460,7 @@ function Footer() {
           <span className="font-serif font-bold text-ink">
             VoltEdge
           </span>
-          <span className="text-xs text-neutral-light ml-2">&copy; 2025</span>
+          <span className="text-xs text-neutral-light ml-2">&copy; {new Date().getFullYear()}</span>
         </div>
         <div className="flex items-center gap-6 text-xs text-neutral-light">
           <a href="#" className="hover:text-text-secondary transition-colors">Privacy</a>

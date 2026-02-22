@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useIdeaStore } from "@/lib/store";
 import { IdeaDetail } from "@/components/ideas/IdeaDetail";
 import { Spinner } from "@/components/ui";
-import { ChatPanel, ChatToggleButton } from "@/components/chat/ChatPanel";
-import type { ChatContext } from "@/lib/types";
 
 export default function IdeaDetailPage() {
   const params = useParams();
@@ -25,30 +23,6 @@ export default function IdeaDetailPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
-
-  // Build chat context from the current idea (must be before early returns)
-  const chatContext: ChatContext = useMemo(
-    () => ({
-      type: "idea" as const,
-      id: idea?.id ?? null,
-      label: idea?.title || "Untitled Idea",
-      data: {
-        title: idea?.title,
-        problemStatement: idea?.problemStatement,
-        proposedSolution: idea?.proposedSolution,
-        technicalApproach: idea?.technicalApproach,
-        contradictionResolved: idea?.contradictionResolved,
-        frameworkUsed: idea?.frameworkUsed,
-        techStack: idea?.techStack,
-        status: idea?.status,
-        score: idea?.score,
-        aliceScore: idea?.aliceScore,
-        claimDraft: idea?.claimDraft,
-        redTeamNotes: idea?.redTeamNotes,
-      },
-    }),
-    [idea]
-  );
 
   if (status === "loading" || !loaded) {
     return (
@@ -73,11 +47,5 @@ export default function IdeaDetailPage() {
     );
   }
 
-  return (
-    <>
-      <IdeaDetail idea={idea} />
-      <ChatToggleButton context={chatContext} />
-      <ChatPanel context={chatContext} />
-    </>
-  );
+  return <IdeaDetail idea={idea} />;
 }

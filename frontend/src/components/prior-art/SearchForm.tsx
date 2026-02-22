@@ -19,7 +19,9 @@ const CPC_OPTIONS = [
 
 export function SearchForm({ onSearch, loading }: SearchFormProps) {
   const [query, setQuery] = useState("");
-  const [selectedCpc, setSelectedCpc] = useState<string[]>([]);
+  const [selectedCpc, setSelectedCpc] = useState<string[]>(
+    CPC_OPTIONS.map((c) => c.value)
+  );
 
   function toggleCpc(value: string) {
     setSelectedCpc((prev) =>
@@ -59,10 +61,10 @@ export function SearchForm({ onSearch, loading }: SearchFormProps) {
               key={cpc.value}
               type="button"
               onClick={() => toggleCpc(cpc.value)}
-              className={`px-2.5 py-1 rounded text-xs font-normal transition-colors ${
+              className={`px-2.5 py-1 rounded text-xs font-normal transition-colors cursor-pointer ${
                 selectedCpc.includes(cpc.value)
-                  ? "bg-accent-light text-blue-ribbon"
-                  : "bg-white text-neutral-dark hover:text-ink"
+                  ? "bg-blue-ribbon text-white"
+                  : "bg-white border border-border text-text-secondary hover:border-blue-ribbon/50"
               }`}
             >
               {cpc.value}

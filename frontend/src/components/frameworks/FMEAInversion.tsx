@@ -142,7 +142,7 @@ export function FMEAInversion({ data, onChange }: FMEAInversionProps) {
                 max={10}
                 value={entry.severity}
                 onChange={(e) => updateEntry(entry.id, { severity: Number(e.target.value) })}
-                className="w-full accent-blue-ribbon"
+                className="w-full accent-blue-ribbon h-2 rounded-lg appearance-none cursor-pointer bg-neutral-off-white [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-ribbon [&::-webkit-slider-thumb]:cursor-pointer"
               />
             </div>
 

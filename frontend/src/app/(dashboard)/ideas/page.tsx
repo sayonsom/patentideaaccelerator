@@ -80,15 +80,6 @@ export default function IdeasPage() {
               </svg>
             </button>
           </div>
-
-          <Link href="/ideas/new">
-            <Button variant="accent" size="sm">
-              <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              New Idea
-            </Button>
-          </Link>
         </div>
       </div>
 
@@ -132,7 +123,7 @@ export default function IdeasPage() {
         </div>
 
         {/* Count */}
-        <span className="text-xs text-text-muted ml-auto">
+        <span className="text-xs text-text-muted">
           {ideas.length} of {allIdeas.length} ideas
         </span>
       </div>
@@ -146,7 +137,7 @@ export default function IdeasPage() {
             </svg>
           }
           title="No ideas yet"
-          description="Start by describing a problem you've solved or a clever technical approach you've built."
+          description="Turn the clever engineering problems you solve every day into defensible patent claims. Describe a problem, and AI helps you find what's patentable."
           action={
             <Link href="/ideas/new">
               <Button variant="accent">Create your first idea</Button>

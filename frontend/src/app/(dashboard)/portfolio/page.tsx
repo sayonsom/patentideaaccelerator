@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { usePortfolioStore } from "@/lib/store";
 import { PortfolioDashboard } from "@/components/portfolio/PortfolioDashboard";
 import { Spinner, EmptyState } from "@/components/ui";
-import { ChatPanel, ChatToggleButton } from "@/components/chat/ChatPanel";
-import type { ChatContext } from "@/lib/types";
 
 export default function PortfolioPage() {
   const { data: session, status } = useSession();
@@ -31,25 +29,6 @@ export default function PortfolioPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
-
-  const chatContext: ChatContext = useMemo(
-    () => ({
-      type: "portfolio",
-      id: activePortfolio?.id ?? null,
-      label: activePortfolio?.name ?? "Patent Portfolio",
-      data: {
-        name: activePortfolio?.name,
-        description: activePortfolio?.description,
-        totalEntries: activePortfolio?.ideas?.length ?? 0,
-        ideas: (activePortfolio?.ideas ?? []).slice(0, 15).map((entry) => ({
-          title: entry.externalTitle || "Linked Idea",
-          externalPatentNo: entry.externalPatentNo,
-          status: entry.status,
-        })),
-      },
-    }),
-    [activePortfolio]
-  );
 
   const handleCreate = async () => {
     if (!newName.trim() || !userId) return;
@@ -159,14 +138,12 @@ export default function PortfolioPage() {
             </svg>
           }
           title="No portfolios yet"
-          description='Create a portfolio to track your filed patents and pending ideas. Click "+ New Portfolio" to get started.'
+          description='Organize and track your patent pipeline from draft to filed. Monitor your IP portfolio strength across technology areas. Click "+ New Portfolio" to get started.'
         />
       ) : (
         <p className="text-sm text-text-secondary">Select a portfolio to view its dashboard.</p>
       )}
 
-      <ChatToggleButton context={chatContext} />
-      <ChatPanel context={chatContext} />
     </div>
   );
 }
