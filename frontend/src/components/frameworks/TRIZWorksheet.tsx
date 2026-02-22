@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { TRIZ_PRINCIPLES } from "@/lib/constants";
 import { Textarea } from "@/components/ui";
+import { useFrameworkCoach } from "@/hooks/useFrameworkCoach";
+import { AICoachPanel } from "./AICoachPanel";
 import type { TRIZData } from "@/lib/types";
 
 interface TRIZWorksheetProps {
@@ -14,6 +16,7 @@ export function TRIZWorksheet({ data, onChange }: TRIZWorksheetProps) {
   const [local, setLocal] = useState<TRIZData>(
     data ?? { improving: "", worsening: "", principles: [], resolution: "" }
   );
+  const { coach, coaching, loading, error, clearCoaching } = useFrameworkCoach();
 
   function update(partial: Partial<TRIZData>) {
     const next = { ...local, ...partial };
@@ -29,11 +32,34 @@ export function TRIZWorksheet({ data, onChange }: TRIZWorksheetProps) {
     update({ principles: next });
   }
 
+  function handleCoach() {
+    const focusArea = !local.improving && !local.worsening
+      ? "contradiction"
+      : local.principles.length === 0
+        ? "principles"
+        : "resolution";
+
+    coach({
+      framework: "triz",
+      worksheetState: {
+        improving: local.improving,
+        worsening: local.worsening,
+        selectedPrinciples: local.principles.map((id) => {
+          const p = TRIZ_PRINCIPLES.find((pr) => pr.id === id);
+          return p ? `#${p.id} ${p.name}` : `#${id}`;
+        }),
+        resolution: local.resolution,
+      },
+      focusArea,
+      previousCoaching: coaching ? JSON.stringify(coaching.questions.slice(0, 2)) : null,
+    });
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-display font-bold text-text-primary mb-1">TRIZ Worksheet</h2>
-        <p className="text-sm text-text-secondary">
+        <h2 className="text-lg font-serif font-bold text-ink mb-1">TRIZ Worksheet</h2>
+        <p className="text-sm text-neutral-dark">
           Identify the contradiction in your system: what are you trying to <em>improve</em>, and what <em>worsens</em> as a result?
         </p>
       </div>
@@ -55,8 +81,17 @@ export function TRIZWorksheet({ data, onChange }: TRIZWorksheetProps) {
         />
       </div>
 
+      {/* AI Coach */}
+      <AICoachPanel
+        coaching={coaching}
+        loading={loading}
+        error={error}
+        onCoach={handleCoach}
+        onClear={clearCoaching}
+      />
+
       <div>
-        <h3 className="text-sm font-semibold text-text-primary mb-3">Select Applicable Principles</h3>
+        <h3 className="text-sm font-medium text-ink mb-3">Select Applicable Principles</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
           {TRIZ_PRINCIPLES.map((p) => {
             const selected = local.principles.includes(p.id);
@@ -67,14 +102,14 @@ export function TRIZWorksheet({ data, onChange }: TRIZWorksheetProps) {
                 onClick={() => togglePrinciple(p.id)}
                 className={`text-left p-3 rounded-lg border transition-colors ${
                   selected
-                    ? "border-accent-gold bg-accent-gold/10"
-                    : "border-border-default bg-surface-panel hover:border-border-subtle"
+                    ? "border-blue-ribbon bg-accent-light"
+                    : "border-border bg-neutral-off-white hover:border-border-subtle"
                 }`}
               >
-                <div className="text-xs font-semibold text-text-primary">
+                <div className="text-xs font-normal text-ink">
                   #{p.id} {p.name}
                 </div>
-                <div className="text-[10px] text-text-secondary mt-0.5">{p.hint}</div>
+                <div className="text-[10px] text-neutral-dark mt-0.5">{p.hint}</div>
               </button>
             );
           })}

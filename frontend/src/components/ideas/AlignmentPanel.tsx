@@ -42,11 +42,11 @@ export function AlignmentPanel({ idea }: AlignmentPanelProps) {
   if (goals.length === 0) {
     return (
       <Card>
-        <h3 className="text-sm font-semibold text-text-primary mb-2">Business Alignment</h3>
-        <p className="text-xs text-text-secondary">
+        <h3 className="text-sm font-medium text-ink mb-2">Business Alignment</h3>
+        <p className="text-xs text-neutral-dark">
           No business goals defined yet.
         </p>
-        <a href="/alignment" className="text-xs text-accent-gold hover:underline mt-1 inline-block">
+        <a href="/alignment" className="text-xs text-blue-ribbon hover:underline mt-1 inline-block">
           Set up goals
         </a>
       </Card>
@@ -93,10 +93,10 @@ export function AlignmentPanel({ idea }: AlignmentPanelProps) {
   return (
     <Card>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-text-primary">Business Alignment</h3>
+        <h3 className="text-sm font-medium text-ink">Business Alignment</h3>
         {aggregate !== null && (
           <span
-            className="text-sm font-bold"
+            className="text-sm font-normal"
             style={{ color: getScoreColor(aggregate) }}
           >
             {aggregate}/10
@@ -112,7 +112,7 @@ export function AlignmentPanel({ idea }: AlignmentPanelProps) {
           const expanded = expandedGoal === goal.id;
 
           return (
-            <div key={goal.id} className="rounded-lg bg-surface-deep p-2">
+            <div key={goal.id} className="rounded-lg bg-neutral-off-white p-2">
               <button
                 onClick={() => setExpandedGoal(expanded ? null : goal.id)}
                 className="flex items-center gap-2 w-full text-left"
@@ -121,12 +121,12 @@ export function AlignmentPanel({ idea }: AlignmentPanelProps) {
                   className="w-2 h-2 rounded-full shrink-0"
                   style={{ backgroundColor: goal.color }}
                 />
-                <span className="text-xs font-medium text-text-primary truncate flex-1">
+                <span className="text-xs font-normal text-ink truncate flex-1">
                   {goal.title}
                 </span>
                 {score !== null ? (
                   <span
-                    className="text-xs font-bold shrink-0"
+                    className="text-xs font-semibold shrink-0"
                     style={{ color: getScoreColor(score) }}
                   >
                     {score}
@@ -146,9 +146,9 @@ export function AlignmentPanel({ idea }: AlignmentPanelProps) {
                       max={10}
                       value={score ?? 0}
                       onChange={(e) => handleManualScore(goal.id, Number(e.target.value))}
-                      className="flex-1 h-1 accent-accent-gold"
+                      className="flex-1 h-1 accent-blue-ribbon"
                     />
-                    <span className="text-xs font-mono text-text-secondary w-5 text-right">
+                    <span className="text-xs font-mono text-neutral-dark w-5 text-right">
                       {score ?? 0}
                     </span>
                   </div>

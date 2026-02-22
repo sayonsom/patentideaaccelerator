@@ -27,9 +27,9 @@ export function Card({
   return (
     <div
       className={`
-        bg-surface-card border border-border rounded-xl
+        bg-white border border-border rounded-lg
         ${paddingClasses[padding]}
-        ${hover ? "hover:border-border-hover hover:bg-surface-elevated transition-all duration-150 cursor-pointer" : ""}
+        ${hover ? "hover:border-border-hover hover:shadow-sm transition-all duration-150 cursor-pointer" : ""}
         ${onClick ? "cursor-pointer" : ""}
         ${className}
       `}

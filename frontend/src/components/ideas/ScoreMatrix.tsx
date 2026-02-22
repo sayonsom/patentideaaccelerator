@@ -19,12 +19,12 @@ export function ScoreMatrix({ score, onChange, readonly = false }: ScoreMatrixPr
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-text-primary">3 x 3 Patent Readiness Matrix</h3>
+      <h3 className="text-sm font-medium text-ink">3 x 3 Patent Readiness Matrix</h3>
       {PATENT_MATRIX.map((dim) => (
         <div key={dim.key}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-base">{dim.icon}</span>
-            <span className="text-sm font-medium text-text-primary">{dim.label}</span>
+            <span className="text-sm font-medium text-ink">{dim.label}</span>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {dim.levels.map((level) => {
@@ -37,12 +37,12 @@ export function ScoreMatrix({ score, onChange, readonly = false }: ScoreMatrixPr
                   onClick={() => setDimension(dim.key, level.score)}
                   className={`rounded-lg border p-2 text-left transition-all ${
                     active
-                      ? "border-accent-gold bg-accent-gold/10"
-                      : "border-border-default bg-surface-deep hover:border-border-subtle"
+                      ? "border-blue-ribbon bg-accent-light"
+                      : "border-border bg-neutral-off-white hover:border-neutral-light"
                   } ${readonly ? "cursor-default" : "cursor-pointer"}`}
                 >
-                  <div className="text-xs font-semibold text-text-primary">{level.label}</div>
-                  <div className="text-[10px] text-text-secondary mt-0.5">{level.desc}</div>
+                  <div className="text-xs font-medium text-ink">{level.label}</div>
+                  <div className="text-[10px] text-neutral-dark mt-0.5">{level.desc}</div>
                 </button>
               );
             })}

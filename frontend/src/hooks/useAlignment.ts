@@ -2,15 +2,16 @@
 
 import { useState, useCallback } from "react";
 import { useSettingsStore } from "@/lib/store";
-import type { BusinessGoal, AlignmentScore } from "@/lib/types";
+import type { AIProvider, BusinessGoal, AlignmentScore } from "@/lib/types";
 import { batchScoreAlignmentAction } from "@/lib/actions/goals";
 
-/** Build headers including optional API key passthrough */
-function buildHeaders(apiKey: string | null): Record<string, string> {
+/** Build headers including API key and provider passthrough */
+function buildHeaders(provider: AIProvider, apiKey: string | null): Record<string, string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (apiKey) {
     headers["x-api-key"] = apiKey;
   }
+  headers["x-ai-provider"] = provider;
   return headers;
 }
 
@@ -21,7 +22,8 @@ function buildHeaders(apiKey: string | null): Record<string, string> {
 export function useAlignment() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const apiKey = useSettingsStore((s) => s.apiKey);
+  const provider = useSettingsStore((s) => s.provider);
+  const getActiveKey = useSettingsStore((s) => s.getActiveKey);
 
   const scoreAlignment = useCallback(
     async (
@@ -36,12 +38,18 @@ export function useAlignment() {
     ): Promise<AlignmentScore[] | null> => {
       if (goals.length === 0) return null;
 
+      const apiKey = getActiveKey();
+      if (!apiKey) {
+        setError(`No API key configured for ${provider}. Add one in Settings.`);
+        return null;
+      }
+
       setLoading(true);
       setError(null);
       try {
         const res = await fetch("/api/ai/alignment-score", {
           method: "POST",
-          headers: buildHeaders(apiKey),
+          headers: buildHeaders(provider, apiKey),
           body: JSON.stringify({
             title: idea.title,
             problemStatement: idea.problemStatement,
@@ -71,7 +79,7 @@ export function useAlignment() {
         setLoading(false);
       }
     },
-    [apiKey]
+    [provider, getActiveKey]
   );
 
   return { scoreAlignment, loading, error };

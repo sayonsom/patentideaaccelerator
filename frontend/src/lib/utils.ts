@@ -67,6 +67,7 @@ export function createBlankIdea(userId: string): {
   id: string;
   userId: string;
   sprintId: null;
+  teamId: null;
   title: string;
   problemStatement: string;
   existingApproach: string;
@@ -83,6 +84,9 @@ export function createBlankIdea(userId: string): {
   frameworkUsed: "none";
   frameworkData: Record<string, never>;
   claimDraft: null;
+  inventiveStepAnalysis: null;
+  marketNeedsAnalysis: null;
+  patentReport: null;
   redTeamNotes: string;
   alignmentScores: never[];
   createdAt: string;
@@ -93,6 +97,7 @@ export function createBlankIdea(userId: string): {
     id: uid(),
     userId,
     sprintId: null,
+    teamId: null,
     title: "",
     problemStatement: "",
     existingApproach: "",
@@ -109,6 +114,9 @@ export function createBlankIdea(userId: string): {
     frameworkUsed: "none",
     frameworkData: {},
     claimDraft: null,
+    inventiveStepAnalysis: null,
+    marketNeedsAnalysis: null,
+    patentReport: null,
     redTeamNotes: "",
     alignmentScores: [],
     createdAt: now,
@@ -134,6 +142,8 @@ export const SOLO_PIPELINE_STAGES: PipelineStage[] = [
   { id: "alice", label: "Alice Screened", complete: (i) => i.aliceScore !== null },
   { id: "prior-art", label: "Prior Art Checked", complete: (i) => !!i.priorArtNotes && i.priorArtNotes.length > 10 },
   { id: "claims", label: "Claims Drafted", complete: (i) => i.claimDraft !== null },
+  { id: "inventive-step", label: "Inventive Step Analyzed", complete: (i) => i.inventiveStepAnalysis !== null },
+  { id: "market-needs", label: "Market Analyzed", complete: (i) => i.marketNeedsAnalysis !== null },
   { id: "red-team", label: "Red Team Reviewed", complete: (i) => !!i.redTeamNotes && i.redTeamNotes.length > 20 },
 ];
 

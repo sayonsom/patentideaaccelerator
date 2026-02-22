@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import type { Idea, IdeaScore, RedTeamResult, FrameworkType } from "@/lib/types";
+import Link from "next/link";
+import type { Idea, IdeaScore, RedTeamResult, FrameworkType, PatentReport, ClaimDraft } from "@/lib/types";
 import { useIdeaStore } from "@/lib/store";
 import { useAI } from "@/hooks/useAI";
+import { useDebouncedField } from "@/hooks/useDebouncedField";
 import { usePriorArt } from "@/hooks/usePriorArt";
 import { Button, Tabs, TabPanel, Input, Textarea, Badge, Card, TagInput, Modal, Spinner } from "@/components/ui";
 import { ScoreMatrix } from "./ScoreMatrix";
@@ -12,12 +14,16 @@ import { AlignmentPanel } from "./AlignmentPanel";
 import { PipelineProgress } from "./PipelineProgress";
 import { AIRefineButton } from "./AIRefineButton";
 import { ClaimDraftDisplay } from "./ClaimDraft";
+import { InventiveStepCard } from "./InventiveStepCard";
+import { MarketNeedsCard } from "./MarketNeedsCard";
+import { ExportButtons } from "./ExportButtons";
 import { SearchForm } from "@/components/prior-art/SearchForm";
 import { PatentResultCard } from "@/components/prior-art/PatentResultCard";
 import { TRIZWorksheet } from "@/components/frameworks/TRIZWorksheet";
 import { SITWorksheet } from "@/components/frameworks/SITWorksheet";
 import { CKWorksheet } from "@/components/frameworks/CKWorksheet";
 import { FMEAInversion } from "@/components/frameworks/FMEAInversion";
+import { ContinuationPanel } from "./ContinuationPanel";
 import { getStatusColor, getTotalScore, getScoreVerdict, timeAgo, getAliceRiskColor } from "@/lib/utils";
 
 interface IdeaDetailProps {
@@ -32,13 +38,28 @@ const STATUS_OPTIONS: { value: Idea["status"]; label: string }[] = [
   { value: "archived", label: "Archived" },
 ];
 
-const DETAIL_TABS = [
+const BASE_DETAIL_TABS = [
   { id: "overview", label: "Overview" },
   { id: "framework", label: "Framework" },
   { id: "claims", label: "Claims" },
+  { id: "patent-filing", label: "Patent Filing" },
   { id: "red-team", label: "Red Team" },
   { id: "prior-art", label: "Prior Art" },
 ];
+
+const emptyClaimDraft: ClaimDraft = {
+  methodClaim: "",
+  systemClaim: "",
+  crmClaim: "",
+  methodDependentClaims: [],
+  systemDependentClaims: [],
+  crmDependentClaims: [],
+  abstractText: "",
+  claimStrategy: "",
+  aliceMitigationNotes: "",
+  prosecutionTips: [],
+  notes: "",
+};
 
 const FRAMEWORK_OPTIONS: { value: FrameworkType; label: string; desc: string }[] = [
   { value: "triz", label: "TRIZ", desc: "Contradiction analysis with inventive principles" },
@@ -54,12 +75,23 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [editing, setEditing] = useState(false);
 
+  const showContinuations = idea.status === "filed" || idea.status === "scored";
+  const detailTabs = useMemo(() => {
+    if (showContinuations) {
+      return [...BASE_DETAIL_TABS, { id: "continuations", label: "Continuations" }];
+    }
+    return BASE_DETAIL_TABS;
+  }, [showContinuations]);
+
   const update = useCallback(
     (updates: Partial<Idea>) => {
       updateIdea(idea.id, updates);
     },
     [idea.id, updateIdea]
   );
+
+  const saveTitle = useCallback((v: string) => update({ title: v }), [update]);
+  const title = useDebouncedField(idea.title, saveTitle);
 
   function handleDelete() {
     if (window.confirm("Delete this idea? This cannot be undone.")) {
@@ -83,12 +115,13 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
           <div className="flex-1 min-w-0">
             {editing ? (
               <Input
-                value={idea.title}
-                onChange={(e) => update({ title: e.target.value })}
-                className="text-xl font-bold"
+                value={title.localValue}
+                onChange={(e) => title.onChange(e.target.value)}
+                onBlur={title.flush}
+                className="text-xl font-semibold"
               />
             ) : (
-              <h1 className="text-xl font-display font-bold text-text-primary truncate">
+              <h1 className="text-xl font-serif font-bold text-ink truncate">
                 {idea.title || "Untitled Idea"}
               </h1>
             )}
@@ -99,7 +132,8 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
               <span className="text-xs text-text-muted">Updated {timeAgo(idea.updatedAt)}</span>
             </div>
           </div>
-          <div className="flex gap-2 ml-4 shrink-0">
+          <div className="flex items-center gap-2 ml-4 shrink-0">
+            <ExportButtons ideaId={idea.id} ideaTitle={idea.title} />
             <Button variant="ghost" size="sm" onClick={() => setEditing(!editing)}>
               {editing ? "Done" : "Edit"}
             </Button>
@@ -109,7 +143,7 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
           </div>
         </div>
 
-        <Tabs tabs={DETAIL_TABS} activeTab={activeTab} onChange={setActiveTab}>
+        <Tabs tabs={detailTabs} activeTab={activeTab} onChange={setActiveTab}>
           <TabPanel id="overview" activeTab={activeTab}>
             <OverviewTab idea={idea} update={update} editing={editing} />
           </TabPanel>
@@ -119,13 +153,20 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
           <TabPanel id="claims" activeTab={activeTab}>
             <ClaimsTab idea={idea} update={update} editing={editing} />
           </TabPanel>
+          <TabPanel id="patent-filing" activeTab={activeTab}>
+            <PatentFilingTab idea={idea} update={update} />
+          </TabPanel>
           <TabPanel id="red-team" activeTab={activeTab}>
             <RedTeamTab idea={idea} update={update} editing={editing} />
           </TabPanel>
           <TabPanel id="prior-art" activeTab={activeTab}>
             <PriorArtTab idea={idea} update={update} />
           </TabPanel>
-        </Tabs>
+          {showContinuations && (
+            <TabPanel id="continuations" activeTab={activeTab}>
+              <ContinuationPanel idea={idea} />
+            </TabPanel>
+          )}        </Tabs>
       </div>
 
       {/* Right sidebar */}
@@ -137,9 +178,9 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
             onChange={(score: IdeaScore) => update({ score })}
           />
           {idea.score && (
-            <div className="mt-3 pt-3 border-t border-border-default">
+            <div className="mt-3 pt-3 border-t border-border">
               <div
-                className="text-sm font-semibold"
+                className="text-sm font-normal"
                 style={{ color: getScoreVerdict(getTotalScore(idea.score)).color }}
               >
                 {getScoreVerdict(getTotalScore(idea.score)).label} ({getTotalScore(idea.score)}/9)
@@ -151,9 +192,9 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
         {/* Alice score */}
         {idea.aliceScore ? (
           <Card>
-            <h3 className="text-sm font-semibold text-text-primary mb-2">Alice / 101 Score</h3>
+            <h3 className="text-sm font-medium text-ink mb-2">Alice / 101 Score</h3>
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl font-bold text-text-primary">{idea.aliceScore.overallScore}</span>
+              <span className="text-2xl font-normal text-ink">{idea.aliceScore.overallScore}</span>
               <span className="text-xs text-text-muted">/100</span>
               <Badge
                 variant="solid"
@@ -162,7 +203,7 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
                 {idea.aliceScore.abstractIdeaRisk} risk
               </Badge>
             </div>
-            <p className="text-xs text-text-secondary">{idea.aliceScore.practicalApplication}</p>
+            <p className="text-xs text-neutral-dark">{idea.aliceScore.practicalApplication}</p>
           </Card>
         ) : (
           <AliceCheckButton idea={idea} update={update} />
@@ -171,18 +212,44 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
         {/* Business Alignment */}
         <AlignmentPanel idea={idea} />
 
+        {/* Sprint Association */}
+        {idea.sprintId && (
+          <Card>
+            <h3 className="text-sm font-medium text-ink mb-2">Sprint</h3>
+            <div className="flex items-center justify-between">
+              <Link
+                href={`/sprints/${idea.sprintId}`}
+                className="inline-flex items-center gap-1.5 text-xs text-blue-ribbon hover:underline"
+              >
+                <span>&#9651;</span>
+                View Sprint
+              </Link>
+              <button
+                onClick={async () => {
+                  const { unlinkFromSprint } = await import("@/lib/api");
+                  await unlinkFromSprint(idea.id);
+                  update({ sprintId: null });
+                }}
+                className="text-[11px] text-text-muted hover:text-red-500 transition-colors"
+              >
+                Remove from Sprint
+              </button>
+            </div>
+          </Card>
+        )}
+
         {/* Status */}
         <Card>
-          <h3 className="text-sm font-semibold text-text-primary mb-2">Status</h3>
+          <h3 className="text-sm font-medium text-ink mb-2">Status</h3>
           <div className="flex flex-wrap gap-1.5">
             {STATUS_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => update({ status: opt.value })}
-                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                className={`px-2.5 py-1 rounded text-xs font-normal transition-colors ${
                   idea.status === opt.value
-                    ? "bg-accent-gold/20 text-accent-gold"
-                    : "bg-surface-deep text-text-secondary hover:text-text-primary"
+                    ? "bg-accent-light text-blue-ribbon"
+                    : "bg-white text-neutral-dark hover:text-ink"
                 }`}
               >
                 {opt.label}
@@ -193,7 +260,7 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
 
         {/* Tags */}
         <Card>
-          <h3 className="text-sm font-semibold text-text-primary mb-2">Tags</h3>
+          <h3 className="text-sm font-medium text-ink mb-2">Tags</h3>
           <TagInput
             tags={idea.tags}
             onChange={(tags) => update({ tags })}
@@ -203,19 +270,19 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
 
         {/* Metadata */}
         <Card>
-          <h3 className="text-sm font-semibold text-text-primary mb-2">Metadata</h3>
+          <h3 className="text-sm font-medium text-ink mb-2">Metadata</h3>
           <dl className="space-y-1.5 text-xs">
             <div className="flex justify-between">
               <dt className="text-text-muted">Created</dt>
-              <dd className="text-text-secondary">{timeAgo(idea.createdAt)}</dd>
+              <dd className="text-neutral-dark">{timeAgo(idea.createdAt)}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-text-muted">Framework</dt>
-              <dd className="text-text-secondary">{idea.frameworkUsed === "none" ? "Freeform" : idea.frameworkUsed.toUpperCase()}</dd>
+              <dd className="text-neutral-dark">{idea.frameworkUsed === "none" ? "Freeform" : idea.frameworkUsed.toUpperCase()}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-text-muted">Phase</dt>
-              <dd className="text-text-secondary capitalize">{idea.phase}</dd>
+              <dd className="text-neutral-dark capitalize">{idea.phase}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-text-muted">ID</dt>
@@ -247,8 +314,8 @@ function AliceCheckButton({ idea, update }: { idea: Idea; update: (u: Partial<Id
 
   return (
     <Card>
-      <h3 className="text-sm font-semibold text-text-primary mb-2">Alice / 101 Score</h3>
-      <p className="text-xs text-text-secondary mb-3">
+      <h3 className="text-sm font-medium text-ink mb-2">Alice / 101 Score</h3>
+      <p className="text-xs text-neutral-dark mb-3">
         Run an AI pre-screen to assess Section 101 eligibility risks.
       </p>
       <Button
@@ -271,6 +338,18 @@ function AliceCheckButton({ idea, update }: { idea: Idea; update: (u: Partial<Id
 function OverviewTab({ idea, update, editing }: { idea: Idea; update: (u: Partial<Idea>) => void; editing: boolean }) {
   const context = `Title: ${idea.title}\nProblem: ${idea.problemStatement}\nSolution: ${idea.proposedSolution}\nTechnical Approach: ${idea.technicalApproach}`;
 
+  const saveProblem = useCallback((v: string) => update({ problemStatement: v }), [update]);
+  const saveExisting = useCallback((v: string) => update({ existingApproach: v }), [update]);
+  const saveSolution = useCallback((v: string) => update({ proposedSolution: v }), [update]);
+  const saveTechnical = useCallback((v: string) => update({ technicalApproach: v }), [update]);
+  const saveContradiction = useCallback((v: string) => update({ contradictionResolved: v }), [update]);
+
+  const problem = useDebouncedField(idea.problemStatement, saveProblem);
+  const existing = useDebouncedField(idea.existingApproach, saveExisting);
+  const solution = useDebouncedField(idea.proposedSolution, saveSolution);
+  const technical = useDebouncedField(idea.technicalApproach, saveTechnical);
+  const contradiction = useDebouncedField(idea.contradictionResolved, saveContradiction);
+
   return (
     <div className="space-y-6">
       <Section label="Problem Statement" refineSlot={
@@ -278,12 +357,13 @@ function OverviewTab({ idea, update, editing }: { idea: Idea; update: (u: Partia
       }>
         {editing ? (
           <Textarea
-            value={idea.problemStatement}
-            onChange={(e) => update({ problemStatement: e.target.value })}
+            value={problem.localValue}
+            onChange={(e) => problem.onChange(e.target.value)}
+            onBlur={problem.flush}
             rows={4}
           />
         ) : (
-          <p className="text-sm text-text-secondary whitespace-pre-wrap">
+          <p className="text-sm text-neutral-dark whitespace-pre-wrap">
             {idea.problemStatement || "No problem statement yet."}
           </p>
         )}
@@ -292,12 +372,13 @@ function OverviewTab({ idea, update, editing }: { idea: Idea; update: (u: Partia
       <Section label="Existing Approach">
         {editing ? (
           <Textarea
-            value={idea.existingApproach}
-            onChange={(e) => update({ existingApproach: e.target.value })}
+            value={existing.localValue}
+            onChange={(e) => existing.onChange(e.target.value)}
+            onBlur={existing.flush}
             rows={3}
           />
         ) : (
-          <p className="text-sm text-text-secondary whitespace-pre-wrap">
+          <p className="text-sm text-neutral-dark whitespace-pre-wrap">
             {idea.existingApproach || "Not described."}
           </p>
         )}
@@ -308,12 +389,13 @@ function OverviewTab({ idea, update, editing }: { idea: Idea; update: (u: Partia
       }>
         {editing ? (
           <Textarea
-            value={idea.proposedSolution}
-            onChange={(e) => update({ proposedSolution: e.target.value })}
+            value={solution.localValue}
+            onChange={(e) => solution.onChange(e.target.value)}
+            onBlur={solution.flush}
             rows={3}
           />
         ) : (
-          <p className="text-sm text-text-secondary whitespace-pre-wrap">
+          <p className="text-sm text-neutral-dark whitespace-pre-wrap">
             {idea.proposedSolution || "Not described."}
           </p>
         )}
@@ -324,12 +406,13 @@ function OverviewTab({ idea, update, editing }: { idea: Idea; update: (u: Partia
       }>
         {editing ? (
           <Textarea
-            value={idea.technicalApproach}
-            onChange={(e) => update({ technicalApproach: e.target.value })}
+            value={technical.localValue}
+            onChange={(e) => technical.onChange(e.target.value)}
+            onBlur={technical.flush}
             rows={4}
           />
         ) : (
-          <p className="text-sm text-text-secondary whitespace-pre-wrap">
+          <p className="text-sm text-neutral-dark whitespace-pre-wrap">
             {idea.technicalApproach || "Not described."}
           </p>
         )}
@@ -340,12 +423,13 @@ function OverviewTab({ idea, update, editing }: { idea: Idea; update: (u: Partia
       }>
         {editing ? (
           <Textarea
-            value={idea.contradictionResolved}
-            onChange={(e) => update({ contradictionResolved: e.target.value })}
+            value={contradiction.localValue}
+            onChange={(e) => contradiction.onChange(e.target.value)}
+            onBlur={contradiction.flush}
             rows={2}
           />
         ) : (
-          <p className="text-sm text-text-secondary whitespace-pre-wrap">
+          <p className="text-sm text-neutral-dark whitespace-pre-wrap">
             {idea.contradictionResolved || "No contradiction noted."}
           </p>
         )}
@@ -375,7 +459,7 @@ function FrameworkTab({ idea, update }: { idea: Idea; update: (u: Partial<Idea>)
   if (idea.frameworkUsed === "none") {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-text-secondary">
+        <p className="text-sm text-neutral-dark">
           Choose an inventive framework to structure your thinking:
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -383,10 +467,10 @@ function FrameworkTab({ idea, update }: { idea: Idea; update: (u: Partial<Idea>)
             <button
               key={fw.value}
               onClick={() => selectFramework(fw.value)}
-              className="text-left p-4 rounded-xl border border-border-default bg-surface-card hover:border-accent-gold/50 hover:bg-surface-elevated transition-all"
+              className="text-left p-4 rounded-xl border border-border bg-white hover:border-blue-ribbon/50 hover:bg-neutral-off-white transition-all"
             >
-              <h4 className="text-sm font-semibold text-text-primary mb-1">{fw.label}</h4>
-              <p className="text-xs text-text-secondary">{fw.desc}</p>
+              <h4 className="text-sm font-medium text-ink mb-1">{fw.label}</h4>
+              <p className="text-xs text-neutral-dark">{fw.desc}</p>
             </button>
           ))}
         </div>
@@ -400,8 +484,8 @@ function FrameworkTab({ idea, update }: { idea: Idea; update: (u: Partial<Idea>)
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-sm text-text-secondary">
-          Framework: <span className="font-semibold text-text-primary">{idea.frameworkUsed.toUpperCase()}</span>
+        <div className="text-sm text-neutral-dark">
+          Framework: <span className="font-normal text-ink">{idea.frameworkUsed.toUpperCase()}</span>
         </div>
         <div className="flex gap-2">
           <Button variant="accent" size="sm" onClick={() => setWorksheetOpen(true)}>
@@ -416,38 +500,38 @@ function FrameworkTab({ idea, update }: { idea: Idea; update: (u: Partial<Idea>)
       {/* Inline data preview */}
       {idea.frameworkData.triz && idea.frameworkUsed === "triz" && (
         <Card>
-          <h4 className="text-sm font-semibold text-text-primary mb-2">TRIZ Data</h4>
+          <h4 className="text-sm font-medium text-ink mb-2">TRIZ Data</h4>
           <dl className="space-y-2 text-sm">
-            <div><dt className="text-text-muted">Improving:</dt><dd className="text-text-secondary">{idea.frameworkData.triz.improving || "—"}</dd></div>
-            <div><dt className="text-text-muted">Worsening:</dt><dd className="text-text-secondary">{idea.frameworkData.triz.worsening || "—"}</dd></div>
-            <div><dt className="text-text-muted">Resolution:</dt><dd className="text-text-secondary">{idea.frameworkData.triz.resolution || "—"}</dd></div>
+            <div><dt className="text-text-muted">Improving:</dt><dd className="text-neutral-dark">{idea.frameworkData.triz.improving || "—"}</dd></div>
+            <div><dt className="text-text-muted">Worsening:</dt><dd className="text-neutral-dark">{idea.frameworkData.triz.worsening || "—"}</dd></div>
+            <div><dt className="text-text-muted">Resolution:</dt><dd className="text-neutral-dark">{idea.frameworkData.triz.resolution || "—"}</dd></div>
           </dl>
         </Card>
       )}
       {idea.frameworkData.ck && idea.frameworkUsed === "ck" && (
         <Card>
-          <h4 className="text-sm font-semibold text-text-primary mb-2">C-K Theory</h4>
+          <h4 className="text-sm font-medium text-ink mb-2">C-K Theory</h4>
           <dl className="space-y-2 text-sm">
-            <div><dt className="text-text-muted">Concepts:</dt><dd className="text-text-secondary whitespace-pre-wrap">{idea.frameworkData.ck.concepts || "—"}</dd></div>
-            <div><dt className="text-text-muted">Knowledge:</dt><dd className="text-text-secondary whitespace-pre-wrap">{idea.frameworkData.ck.knowledge || "—"}</dd></div>
-            <div><dt className="text-text-muted">Opportunity:</dt><dd className="text-text-secondary whitespace-pre-wrap">{idea.frameworkData.ck.opportunity || "—"}</dd></div>
+            <div><dt className="text-text-muted">Concepts:</dt><dd className="text-neutral-dark whitespace-pre-wrap">{idea.frameworkData.ck.concepts || "—"}</dd></div>
+            <div><dt className="text-text-muted">Knowledge:</dt><dd className="text-neutral-dark whitespace-pre-wrap">{idea.frameworkData.ck.knowledge || "—"}</dd></div>
+            <div><dt className="text-text-muted">Opportunity:</dt><dd className="text-neutral-dark whitespace-pre-wrap">{idea.frameworkData.ck.opportunity || "—"}</dd></div>
           </dl>
         </Card>
       )}
       {idea.frameworkData.sit && idea.frameworkUsed === "sit" && (
         <Card>
-          <h4 className="text-sm font-semibold text-text-primary mb-2">SIT Templates</h4>
+          <h4 className="text-sm font-medium text-ink mb-2">SIT Templates</h4>
           <dl className="space-y-2 text-sm">
             {Object.entries(idea.frameworkData.sit).map(([k, v]) => (
-              <div key={k}><dt className="text-text-muted capitalize">{k}:</dt><dd className="text-text-secondary whitespace-pre-wrap">{v || "—"}</dd></div>
+              <div key={k}><dt className="text-text-muted capitalize">{k}:</dt><dd className="text-neutral-dark whitespace-pre-wrap">{v || "—"}</dd></div>
             ))}
           </dl>
         </Card>
       )}
       {idea.frameworkData.fmea && idea.frameworkUsed === "fmea" && (
         <Card>
-          <h4 className="text-sm font-semibold text-text-primary mb-2">FMEA Entries</h4>
-          <p className="text-xs text-text-secondary">{idea.frameworkData.fmea.length} failure mode(s) analyzed</p>
+          <h4 className="text-sm font-medium text-ink mb-2">FMEA Entries</h4>
+          <p className="text-xs text-neutral-dark">{idea.frameworkData.fmea.length} failure mode(s) analyzed</p>
         </Card>
       )}
 
@@ -488,8 +572,16 @@ function ClaimsTab({ idea, update, editing }: { idea: Idea; update: (u: Partial<
   async function handleGenerate() {
     const result = await draftClaims({
       title: idea.title,
-      technicalApproach: idea.technicalApproach,
+      problemStatement: idea.problemStatement,
+      existingApproach: idea.existingApproach,
       proposedSolution: idea.proposedSolution,
+      technicalApproach: idea.technicalApproach,
+      contradictionResolved: idea.contradictionResolved,
+      techStack: idea.techStack,
+      frameworkUsed: idea.frameworkUsed,
+      frameworkData: idea.frameworkData,
+      aliceScore: idea.aliceScore,
+      score: idea.score,
     });
     if (result) {
       update({ claimDraft: result });
@@ -502,7 +594,7 @@ function ClaimsTab({ idea, update, editing }: { idea: Idea; update: (u: Partial<
     <div className="space-y-6">
       {/* Generate button */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-text-secondary">
+        <p className="text-sm text-neutral-dark">
           AI-generated claim skeletons for method, system, and CRM claims.
         </p>
         <Button
@@ -530,48 +622,70 @@ function ClaimsTab({ idea, update, editing }: { idea: Idea; update: (u: Partial<
 
       {/* Manual editing fallback */}
       {editing && (
-        <div className="space-y-4 pt-4 border-t border-border-default">
-          <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Manual Editing</h4>
-          <Section label="Method Claim">
-            <Textarea
-              value={claim?.methodClaim ?? ""}
-              onChange={(e) =>
-                update({ claimDraft: { ...(claim ?? { methodClaim: "", systemClaim: "", crmClaim: "", notes: "" }), methodClaim: e.target.value } })
-              }
-              rows={5}
-              placeholder="A method for [verb]-ing ... comprising: [step a], [step b]..."
-            />
-          </Section>
-          <Section label="System Claim">
-            <Textarea
-              value={claim?.systemClaim ?? ""}
-              onChange={(e) =>
-                update({ claimDraft: { ...(claim ?? { methodClaim: "", systemClaim: "", crmClaim: "", notes: "" }), systemClaim: e.target.value } })
-              }
-              rows={5}
-              placeholder="A system comprising: a processor; a memory storing instructions..."
-            />
-          </Section>
-          <Section label="Computer-Readable Medium Claim">
-            <Textarea
-              value={claim?.crmClaim ?? ""}
-              onChange={(e) =>
-                update({ claimDraft: { ...(claim ?? { methodClaim: "", systemClaim: "", crmClaim: "", notes: "" }), crmClaim: e.target.value } })
-              }
-              rows={5}
-              placeholder="A non-transitory computer-readable medium storing instructions..."
-            />
-          </Section>
-        </div>
+        <ClaimsManualEdit claim={claim} update={update} />
       )}
 
       {/* No claims and not editing */}
       {!claim && !editing && (
         <div className="py-8 text-center">
-          <p className="text-sm text-text-secondary">No claim drafts yet.</p>
+          <p className="text-sm text-neutral-dark">No claim drafts yet.</p>
           <p className="text-xs text-text-muted mt-1">Click &quot;Generate Claims&quot; above to create AI-drafted claim skeletons.</p>
         </div>
       )}
+    </div>
+  );
+}
+
+function ClaimsManualEdit({ claim, update }: { claim: ClaimDraft | null | undefined; update: (u: Partial<Idea>) => void }) {
+  const base = claim ?? emptyClaimDraft;
+
+  const saveMethod = useCallback(
+    (v: string) => update({ claimDraft: { ...base, methodClaim: v } }),
+    [update, base]
+  );
+  const saveSystem = useCallback(
+    (v: string) => update({ claimDraft: { ...base, systemClaim: v } }),
+    [update, base]
+  );
+  const saveCrm = useCallback(
+    (v: string) => update({ claimDraft: { ...base, crmClaim: v } }),
+    [update, base]
+  );
+
+  const method = useDebouncedField(base.methodClaim, saveMethod);
+  const system = useDebouncedField(base.systemClaim, saveSystem);
+  const crm = useDebouncedField(base.crmClaim, saveCrm);
+
+  return (
+    <div className="space-y-4 pt-4 border-t border-border">
+      <h4 className="text-xs font-medium text-text-muted uppercase tracking-wider">Manual Editing</h4>
+      <Section label="Method Claim">
+        <Textarea
+          value={method.localValue}
+          onChange={(e) => method.onChange(e.target.value)}
+          onBlur={method.flush}
+          rows={5}
+          placeholder="A method for [verb]-ing ... comprising: [step a], [step b]..."
+        />
+      </Section>
+      <Section label="System Claim">
+        <Textarea
+          value={system.localValue}
+          onChange={(e) => system.onChange(e.target.value)}
+          onBlur={system.flush}
+          rows={5}
+          placeholder="A system comprising: a processor; a memory storing instructions..."
+        />
+      </Section>
+      <Section label="Computer-Readable Medium Claim">
+        <Textarea
+          value={crm.localValue}
+          onChange={(e) => crm.onChange(e.target.value)}
+          onBlur={crm.flush}
+          rows={5}
+          placeholder="A non-transitory computer-readable medium storing instructions..."
+        />
+      </Section>
     </div>
   );
 }
@@ -602,7 +716,7 @@ function RedTeamTab({ idea, update, editing }: { idea: Idea; update: (u: Partial
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-text-secondary">
+        <p className="text-sm text-neutral-dark">
           Play devil&apos;s advocate. What are the weaknesses? Why might this <em>not</em> be patentable?
         </p>
         <Button
@@ -619,8 +733,8 @@ function RedTeamTab({ idea, update, editing }: { idea: Idea; update: (u: Partial
       {result && (
         <div className="space-y-3">
           <Card>
-            <h4 className="text-xs font-semibold text-accent-gold uppercase tracking-wider mb-2">AI Critique</h4>
-            <p className="text-sm text-text-secondary whitespace-pre-wrap">{result.critique}</p>
+            <h4 className="text-xs font-medium text-blue-ribbon uppercase tracking-wider mb-2">AI Critique</h4>
+            <p className="text-sm text-neutral-dark whitespace-pre-wrap">{result.critique}</p>
           </Card>
 
           <CollapsibleList title="Weaknesses" items={result.weaknesses} color="#ef4444" />
@@ -632,21 +746,31 @@ function RedTeamTab({ idea, update, editing }: { idea: Idea; update: (u: Partial
 
       {/* Freeform notes */}
       <div className="pt-2">
-        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Your Notes</h4>
+        <h4 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">Your Notes</h4>
         {editing ? (
-          <Textarea
-            value={idea.redTeamNotes}
-            onChange={(e) => update({ redTeamNotes: e.target.value })}
-            rows={8}
-            placeholder="List potential weaknesses, prior art concerns, Alice/101 risks, claim ambiguities..."
-          />
+          <RedTeamNotesEditor idea={idea} update={update} />
         ) : (
-          <p className="text-sm text-text-secondary whitespace-pre-wrap">
+          <p className="text-sm text-neutral-dark whitespace-pre-wrap">
             {idea.redTeamNotes || "No red team notes yet."}
           </p>
         )}
       </div>
     </div>
+  );
+}
+
+function RedTeamNotesEditor({ idea, update }: { idea: Idea; update: (u: Partial<Idea>) => void }) {
+  const saveNotes = useCallback((v: string) => update({ redTeamNotes: v }), [update]);
+  const notes = useDebouncedField(idea.redTeamNotes, saveNotes);
+
+  return (
+    <Textarea
+      value={notes.localValue}
+      onChange={(e) => notes.onChange(e.target.value)}
+      onBlur={notes.flush}
+      rows={8}
+      placeholder="List potential weaknesses, prior art concerns, Alice/101 risks, claim ambiguities..."
+    />
   );
 }
 
@@ -669,7 +793,7 @@ function PriorArtTab({ idea, update }: { idea: Idea; update: (u: Partial<Idea>) 
       {/* Results */}
       {results.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+          <h4 className="text-xs font-medium text-text-muted uppercase tracking-wider">
             {results.length} result{results.length !== 1 ? "s" : ""} found
           </h4>
           {results.map((r) => (
@@ -679,30 +803,287 @@ function PriorArtTab({ idea, update }: { idea: Idea; update: (u: Partial<Idea>) 
       )}
 
       {/* Prior art notes */}
-      <div className="pt-4 border-t border-border-default">
+      <div className="pt-4 border-t border-border">
         <div className="flex items-center justify-between mb-2">
-          <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Prior Art Notes</h4>
+          <h4 className="text-xs font-medium text-text-muted uppercase tracking-wider">Prior Art Notes</h4>
           <button
             onClick={() => setNotesEditing(!notesEditing)}
-            className="text-[10px] text-accent-gold hover:underline"
+            className="text-[10px] text-blue-ribbon hover:underline"
           >
             {notesEditing ? "Done" : "Edit"}
           </button>
         </div>
         {notesEditing ? (
-          <Textarea
-            value={idea.priorArtNotes}
-            onChange={(e) => update({ priorArtNotes: e.target.value })}
-            rows={5}
-            placeholder="Document prior art findings, relevant patents, and differentiation points..."
-          />
+          <PriorArtNotesEditor idea={idea} update={update} />
         ) : (
-          <p className="text-sm text-text-secondary whitespace-pre-wrap">
+          <p className="text-sm text-neutral-dark whitespace-pre-wrap">
             {idea.priorArtNotes || "No prior art notes yet. Search above and document your findings here."}
           </p>
         )}
       </div>
     </div>
+  );
+}
+
+function PriorArtNotesEditor({ idea, update }: { idea: Idea; update: (u: Partial<Idea>) => void }) {
+  const saveNotes = useCallback((v: string) => update({ priorArtNotes: v }), [update]);
+  const notes = useDebouncedField(idea.priorArtNotes, saveNotes);
+
+  return (
+    <Textarea
+      value={notes.localValue}
+      onChange={(e) => notes.onChange(e.target.value)}
+      onBlur={notes.flush}
+      rows={5}
+      placeholder="Document prior art findings, relevant patents, and differentiation points..."
+    />
+  );
+}
+
+// ─── Patent Filing Tab ────────────────────────────────────────
+
+function PatentFilingTab({ idea, update }: { idea: Idea; update: (u: Partial<Idea>) => void }) {
+  const { analyzeInventiveStep, analyzeMarketNeeds, generatePatentReport, loading } = useAI();
+  const [activeAction, setActiveAction] = useState<"inventive" | "market" | "report" | null>(null);
+
+  async function handleAnalyzeInventiveStep() {
+    setActiveAction("inventive");
+    const result = await analyzeInventiveStep({
+      title: idea.title,
+      problemStatement: idea.problemStatement,
+      proposedSolution: idea.proposedSolution,
+      technicalApproach: idea.technicalApproach,
+      existingApproach: idea.existingApproach,
+    });
+    if (result) {
+      update({ inventiveStepAnalysis: result });
+    }
+    setActiveAction(null);
+  }
+
+  async function handleAnalyzeMarketNeeds() {
+    setActiveAction("market");
+    const result = await analyzeMarketNeeds({
+      title: idea.title,
+      problemStatement: idea.problemStatement,
+      proposedSolution: idea.proposedSolution,
+      technicalApproach: idea.technicalApproach,
+      techStack: idea.techStack,
+    });
+    if (result) {
+      update({ marketNeedsAnalysis: result });
+    }
+    setActiveAction(null);
+  }
+
+  async function handleGenerateReport() {
+    setActiveAction("report");
+    const result = await generatePatentReport({
+      title: idea.title,
+      problemStatement: idea.problemStatement,
+      proposedSolution: idea.proposedSolution,
+      technicalApproach: idea.technicalApproach,
+      existingApproach: idea.existingApproach,
+      techStack: idea.techStack,
+      contradictionResolved: idea.contradictionResolved,
+      frameworkUsed: idea.frameworkUsed,
+      aliceScore: idea.aliceScore,
+      inventiveStepAnalysis: idea.inventiveStepAnalysis,
+      marketNeedsAnalysis: idea.marketNeedsAnalysis,
+      claimDraft: idea.claimDraft,
+      score: idea.score,
+    });
+    if (result) {
+      update({ patentReport: result });
+    }
+    setActiveAction(null);
+  }
+
+  const isLoading = loading || activeAction !== null;
+  const hasInventiveStep = !!idea.inventiveStepAnalysis;
+  const hasMarketNeeds = !!idea.marketNeedsAnalysis;
+  const canGenerateReport = hasInventiveStep && hasMarketNeeds;
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-neutral-dark">
+        Comprehensive patent filing analyses. Run each analysis to build a complete filing strategy.
+      </p>
+
+      {/* Inventive Step Section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-medium text-text-muted uppercase tracking-wider">
+            Inventive Step Analysis
+          </h4>
+          <Button
+            variant="accent"
+            size="sm"
+            onClick={handleAnalyzeInventiveStep}
+            disabled={isLoading || !idea.problemStatement}
+          >
+            {activeAction === "inventive" ? (
+              <>
+                <Spinner size="sm" /> Analyzing...
+              </>
+            ) : hasInventiveStep ? (
+              "Re-analyze"
+            ) : (
+              "Analyze Inventive Step"
+            )}
+          </Button>
+        </div>
+        {!idea.problemStatement && (
+          <p className="text-[10px] text-text-muted">Add a problem statement in the Overview tab first.</p>
+        )}
+        {hasInventiveStep && <InventiveStepCard analysis={idea.inventiveStepAnalysis!} />}
+        {!hasInventiveStep && !isLoading && (
+          <div className="py-6 text-center rounded-lg border border-dashed border-border">
+            <p className="text-sm text-neutral-dark">No inventive step analysis yet.</p>
+            <p className="text-xs text-text-muted mt-1">
+              Click &quot;Analyze Inventive Step&quot; to identify non-obvious contributions.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Market Needs Section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-medium text-text-muted uppercase tracking-wider">
+            Market Needs Analysis
+          </h4>
+          <Button
+            variant="accent"
+            size="sm"
+            onClick={handleAnalyzeMarketNeeds}
+            disabled={isLoading || !idea.problemStatement}
+          >
+            {activeAction === "market" ? (
+              <>
+                <Spinner size="sm" /> Analyzing...
+              </>
+            ) : hasMarketNeeds ? (
+              "Re-analyze"
+            ) : (
+              "Analyze Market Needs"
+            )}
+          </Button>
+        </div>
+        {hasMarketNeeds && <MarketNeedsCard analysis={idea.marketNeedsAnalysis!} />}
+        {!hasMarketNeeds && !isLoading && (
+          <div className="py-6 text-center rounded-lg border border-dashed border-border">
+            <p className="text-sm text-neutral-dark">No market needs analysis yet.</p>
+            <p className="text-xs text-text-muted mt-1">
+              Click &quot;Analyze Market Needs&quot; to assess commercial potential.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Full Patent Report Section */}
+      <div className="space-y-3 pt-4 border-t border-border">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-xs font-medium text-text-muted uppercase tracking-wider">
+              Full Patent Report
+            </h4>
+            {!canGenerateReport && (
+              <p className="text-[10px] text-text-muted mt-0.5">
+                Complete both analyses above to generate a full report.
+              </p>
+            )}
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleGenerateReport}
+            disabled={isLoading || !canGenerateReport}
+          >
+            {activeAction === "report" ? (
+              <>
+                <Spinner size="sm" /> Generating...
+              </>
+            ) : idea.patentReport ? (
+              "Regenerate Report"
+            ) : (
+              "Generate Report"
+            )}
+          </Button>
+        </div>
+
+        {idea.patentReport && (
+          <PatentReportDisplay report={idea.patentReport} />
+        )}
+        {!idea.patentReport && !isLoading && (
+          <div className="py-6 text-center rounded-lg border border-dashed border-border">
+            <p className="text-sm text-neutral-dark">No patent report yet.</p>
+            <p className="text-xs text-text-muted mt-1">
+              Run the inventive step and market needs analyses first, then generate the full report.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PatentReportDisplay({ report }: { report: PatentReport }) {
+  return (
+    <Card>
+      <h3 className="text-sm font-medium text-ink mb-4">Patent Filing Report</h3>
+
+      <div className="space-y-4">
+        {/* Executive Summary */}
+        <div className="rounded-lg bg-accent-light border border-blue-ribbon/20 p-3">
+          <h4 className="text-[10px] font-medium text-blue-ribbon uppercase tracking-wider mb-1">
+            Executive Summary
+          </h4>
+          <p className="text-xs text-ink whitespace-pre-wrap">{report.executiveSummary}</p>
+        </div>
+
+        {/* Claim Strategy */}
+        <div>
+          <h4 className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1">
+            Claim Strategy
+          </h4>
+          <p className="text-xs text-neutral-dark">{report.claimStrategy}</p>
+        </div>
+
+        {/* Filing Recommendation */}
+        <div>
+          <h4 className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1">
+            Filing Recommendation
+          </h4>
+          <p className="text-xs text-neutral-dark">{report.filingRecommendation}</p>
+        </div>
+
+        {/* Risk Assessment */}
+        <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+          <h4 className="text-[10px] font-medium text-red-700 uppercase tracking-wider mb-1">
+            Risk Assessment
+          </h4>
+          <p className="text-xs text-neutral-dark">{report.riskAssessment}</p>
+        </div>
+
+        {/* Next Steps */}
+        {report.nextSteps?.length > 0 && (
+          <div>
+            <h4 className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-2">
+              Recommended Next Steps
+            </h4>
+            <ol className="space-y-1.5">
+              {report.nextSteps.map((step, i) => (
+                <li key={i} className="text-xs text-neutral-dark flex items-start gap-2">
+                  <span className="text-blue-ribbon font-normal shrink-0">{i + 1}.</span>
+                  {step}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
 
@@ -712,7 +1093,7 @@ function Section({ label, children, refineSlot }: { label: string; children: Rea
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
-        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">{label}</h4>
+        <h4 className="text-xs font-medium text-text-muted uppercase tracking-wider">{label}</h4>
         {refineSlot}
       </div>
       {children}
@@ -726,14 +1107,14 @@ function CollapsibleList({ title, items, color }: { title: string; items: string
   if (items.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-border-default overflow-hidden">
+    <div className="rounded-lg border border-border overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-surface-deep hover:bg-surface-elevated transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2 bg-white hover:bg-neutral-off-white transition-colors"
       >
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-          <span className="text-xs font-semibold text-text-primary">{title}</span>
+          <span className="text-xs font-normal text-ink">{title}</span>
           <Badge variant="outline" size="sm">{items.length}</Badge>
         </div>
         <svg
@@ -746,7 +1127,7 @@ function CollapsibleList({ title, items, color }: { title: string; items: string
       {open && (
         <ul className="px-3 py-2 space-y-1.5">
           {items.map((item, i) => (
-            <li key={i} className="text-xs text-text-secondary flex gap-2">
+            <li key={i} className="text-xs text-neutral-dark flex gap-2">
               <span className="text-text-muted shrink-0">{i + 1}.</span>
               {item}
             </li>

@@ -1,4 +1,35 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap");
+/* ─── Custom Fonts ───────────────────────────────────────────── */
+
+/* Bower — serif display font (bold only) */
+@font-face {
+  font-family: "Bower";
+  src: url("/fonts/Bower/Bower-Bold/Web Fonts/40fccfffa7bc57048f06f7420d6fe7ae.woff2") format("woff2"),
+       url("/fonts/Bower/Bower-Bold/Web Fonts/40fccfffa7bc57048f06f7420d6fe7ae.woff") format("woff"),
+       url("/fonts/Bower/Bower-Bold/Web Fonts/40fccfffa7bc57048f06f7420d6fe7ae.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Zalando Sans — variable font (weight 200-900, width 75%-125%)
+   Replaces McKinsey Sans which only had a single Regular weight.
+   Now font-light/font-normal/font-medium/font-semibold/font-bold
+   all render with genuine, optically-correct glyph outlines. */
+@font-face {
+  font-family: "Zalando Sans";
+  src: url("/fonts/Zalando_Sans/ZalandoSans-Variable.ttf") format("truetype");
+  font-weight: 200 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Zalando Sans";
+  src: url("/fonts/Zalando_Sans/ZalandoSans-Italic-Variable.ttf") format("truetype");
+  font-weight: 200 900;
+  font-style: italic;
+  font-display: swap;
+}
 
 @tailwind base;
 @tailwind components;
@@ -6,31 +37,18 @@
 
 :root {
   /* Font families */
-  --font-body: "DM Sans", sans-serif;
-  --font-display: "Playfair Display", serif;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-serif: "Bower", Georgia, serif;
+  --font-sans: "Zalando Sans", Arial, Helvetica, sans-serif;
 
-  /* Series colors (light mode) */
-  --series-1: #003A8F;
-  --series-2: #1F4CEB;
-  --series-3: #5B7FA6;
-  --series-4: #2F7F9D;
-  --series-5: #2E6F4E;
-  --series-6: #C69214;
-  --series-7: #7A2E2E;
-  --series-8: #6B7280;
-}
-
-.dark {
-  /* Series colors (dark mode) */
-  --series-1: #4F83CC;
-  --series-2: #1F4CEB;
-  --series-3: #5B7FA6;
-  --series-4: #2F7F9D;
-  --series-5: #4CAF84;
-  --series-6: #E0B84C;
-  --series-7: #C26D6D;
-  --series-8: #9CA3AF;
+  /* Series colors for charts/data viz */
+  --series-1: #051C2C;
+  --series-2: #2251FF;
+  --series-3: #163E93;
+  --series-4: #30A3DA;
+  --series-5: #053259;
+  --series-6: #BFAE5A;
+  --series-7: #D9C666;
+  --series-8: #A2AAAD;
 }
 
 @layer base {
@@ -41,52 +59,63 @@
   html,
   body {
     @apply min-h-screen antialiased;
-    font-family: var(--font-body);
+    font-family: var(--font-sans);
   }
 
   body {
-    @apply bg-surface-deep text-text-secondary;
+    @apply bg-white text-ink;
   }
 
   ::selection {
-    @apply bg-accent-gold text-surface-deep;
+    @apply bg-blue-ribbon/20 text-ink;
   }
 
-  /* Scrollbar */
+  /* Scrollbar — subtle for light theme */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    @apply bg-surface-deep;
+    @apply bg-transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-border-hover rounded-sm;
+    @apply bg-neutral-light/60 rounded-full;
   }
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-text-faint;
+    @apply bg-neutral-light;
   }
 
   /* Form element base styling */
   input,
   textarea,
   select {
-    font-family: var(--font-body);
+    font-family: var(--font-sans);
   }
 
   input:focus,
   textarea:focus,
   select:focus {
-    @apply outline-none ring-1 ring-accent-gold border-accent-gold;
+    @apply outline-none ring-1 ring-blue-ribbon border-blue-ribbon;
   }
 
   button {
-    font-family: var(--font-body);
+    font-family: var(--font-sans);
     @apply cursor-pointer;
   }
 
   button:disabled {
     @apply cursor-not-allowed opacity-50;
+  }
+
+  /* Typography — Bower serif for major headings, Zalando Sans for sub-headings */
+  h1, h2, h3 {
+    font-family: var(--font-serif);
+    @apply text-ink;
+  }
+
+  h4, h5, h6 {
+    font-family: var(--font-sans);
+    @apply text-ink;
   }
 }
 
@@ -95,11 +124,11 @@
     text-wrap: balance;
   }
 
-  .font-display {
-    font-family: var(--font-display);
+  .font-serif {
+    font-family: var(--font-serif);
   }
 
-  .font-mono {
-    font-family: var(--font-mono);
+  .font-sans {
+    font-family: var(--font-sans);
   }
 }

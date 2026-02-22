@@ -23,8 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="min-h-screen bg-surface-deep text-text-secondary antialiased">
+    <html lang="en">
+      <body className="min-h-screen bg-white text-ink antialiased">
         <SessionProvider>{children}</SessionProvider>
       </body>
     </html>

@@ -27,12 +27,12 @@ export function PipelineProgress({ idea, onStageClick }: PipelineProgressProps) 
     <div className="mb-6">
       {/* Progress bar */}
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-semibold text-text-secondary">
+        <span className="text-xs font-normal text-neutral-dark">
           {completed} of {total} steps complete
         </span>
-        <span className="text-xs font-mono text-text-muted">{percent}%</span>
+        <span className="text-xs font-mono text-neutral-light">{percent}%</span>
       </div>
-      <div className="h-1.5 bg-surface-deep rounded-full overflow-hidden mb-4">
+      <div className="h-1.5 bg-neutral-off-white rounded-full overflow-hidden mb-4">
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{
@@ -51,11 +51,11 @@ export function PipelineProgress({ idea, onStageClick }: PipelineProgressProps) 
               onClick={() => onStageClick?.(STAGE_TO_TAB[stage.id] ?? "overview")}
               title={stage.label}
               className={`
-                relative w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0
+                relative w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-normal shrink-0
                 transition-all duration-200 hover:scale-110
                 ${done
-                  ? "bg-accent-gold text-surface-deep"
-                  : "bg-surface-deep border border-border-default text-text-muted"
+                  ? "bg-blue-ribbon text-white"
+                  : "bg-neutral-off-white border border-border text-neutral-light"
                 }
               `}
             >
@@ -70,7 +70,7 @@ export function PipelineProgress({ idea, onStageClick }: PipelineProgressProps) 
 
             {/* Connector line */}
             {i < stages.length - 1 && (
-              <div className={`flex-1 h-px mx-0.5 ${done ? "bg-accent-gold/40" : "bg-border-default"}`} />
+              <div className={`flex-1 h-px mx-0.5 ${done ? "bg-blue-ribbon/40" : "bg-border"}`} />
             )}
           </div>
         ))}
@@ -80,7 +80,7 @@ export function PipelineProgress({ idea, onStageClick }: PipelineProgressProps) 
       <div className="hidden md:flex items-start gap-0 mt-1">
         {stages.map(({ stage, done }, i) => (
           <div key={stage.id} className={`flex-1 last:flex-none ${i < stages.length - 1 ? "" : ""}`}>
-            <p className={`text-[9px] leading-tight w-7 text-center ${done ? "text-accent-gold" : "text-text-muted"}`}>
+            <p className={`text-[9px] leading-tight w-7 text-center ${done ? "text-blue-ribbon" : "text-neutral-light"}`}>
               {stage.label.split(" ")[0]}
             </p>
           </div>

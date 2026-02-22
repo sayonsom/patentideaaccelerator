@@ -46,7 +46,7 @@ function ScoreMatrix({ idea }: { idea: Idea }) {
             <div
               key={`${level}-${cell.key}`}
               className={`rounded-[2px] ${
-                active ? "bg-accent-gold" : "bg-border-subtle"
+                active ? "bg-blue-ribbon" : "bg-border-subtle"
               }`}
             />
           );
@@ -64,7 +64,7 @@ export function IdeaCard({ idea }: IdeaCardProps) {
 
   return (
     <Link href={`/ideas/${idea.id}`} className="block group">
-      <div className="rounded-xl border border-border-default bg-surface-panel p-4 hover:border-accent-gold/40 transition-colors">
+      <div className="rounded-xl border border-border bg-neutral-off-white p-4 hover:border-blue-ribbon/40 transition-colors">
         {/* Top row: status + score matrix */}
         <div className="flex items-start justify-between mb-3">
           <Badge variant="solid" color={getStatusColor(idea.status)}>
@@ -74,13 +74,13 @@ export function IdeaCard({ idea }: IdeaCardProps) {
         </div>
 
         {/* Title */}
-        <h3 className="text-sm font-semibold text-text-primary mb-1 group-hover:text-accent-gold transition-colors line-clamp-2">
+        <h3 className="text-sm font-medium text-ink mb-1 group-hover:text-blue-ribbon transition-colors line-clamp-2">
           {idea.title || "Untitled Idea"}
         </h3>
 
         {/* Problem snippet */}
         {idea.problemStatement && (
-          <p className="text-xs text-text-secondary mb-3 line-clamp-2">
+          <p className="text-xs text-neutral-dark mb-3 line-clamp-2">
             {truncate(idea.problemStatement, 120)}
           </p>
         )}
@@ -89,7 +89,7 @@ export function IdeaCard({ idea }: IdeaCardProps) {
         {idea.aliceScore && (
           <div className="mb-3">
             <span
-              className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+              className={`inline-flex items-center gap-1 text-xs font-normal px-2 py-0.5 rounded-full ${
                 idea.aliceScore.abstractIdeaRisk === "low"
                   ? "bg-green-900/30 text-green-400"
                   : idea.aliceScore.abstractIdeaRisk === "medium"
@@ -105,7 +105,7 @@ export function IdeaCard({ idea }: IdeaCardProps) {
         {/* Alignment score badge */}
         {idea.alignmentScores.length > 0 && (
           <div className="mb-3">
-            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-900/30 text-blue-400">
+            <span className="inline-flex items-center gap-1 text-xs font-normal px-2 py-0.5 rounded-full bg-blue-900/30 text-blue-400">
               Align: {(idea.alignmentScores.reduce((s, a) => s + a.score, 0) / idea.alignmentScores.length).toFixed(1)}/10
             </span>
           </div>
@@ -118,11 +118,20 @@ export function IdeaCard({ idea }: IdeaCardProps) {
           </Badge>
         )}
 
+        {/* Sprint badge */}
+        {idea.sprintId && (
+          <div className="mb-3">
+            <span className="inline-flex items-center gap-1 text-[10px] font-normal px-2 py-0.5 rounded-full bg-blue-ribbon/10 text-blue-ribbon border border-blue-ribbon/20">
+              &#9651; Sprint
+            </span>
+          </div>
+        )}
+
         {/* Bottom: tags + timestamp */}
         <div className="flex items-center justify-between mt-auto pt-2 border-t border-border-subtle">
           <div className="flex gap-1 overflow-hidden">
             {idea.tags.slice(0, 3).map((tag) => (
-              <span key={tag} className="text-[10px] text-text-muted bg-surface-deep px-1.5 py-0.5 rounded">
+              <span key={tag} className="text-[10px] text-text-muted bg-white px-1.5 py-0.5 rounded">
                 {tag}
               </span>
             ))}
@@ -135,14 +144,14 @@ export function IdeaCard({ idea }: IdeaCardProps) {
 
         {/* Score verdict */}
         {verdict && (
-          <div className="mt-2 text-[10px] font-medium" style={{ color: verdict.color }}>
+          <div className="mt-2 text-[10px] font-normal" style={{ color: verdict.color }}>
             {verdict.label} ({total}/9)
           </div>
         )}
 
         {/* Pipeline progress bar */}
         <div className="mt-2 flex items-center gap-2">
-          <div className="flex-1 h-1 bg-surface-deep rounded-full overflow-hidden">
+          <div className="flex-1 h-1 bg-white rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{

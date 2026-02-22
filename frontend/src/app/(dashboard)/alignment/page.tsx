@@ -80,7 +80,7 @@ export default function AlignmentPage() {
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-display font-bold text-text-primary">Business Alignment</h1>
+        <h1 className="text-2xl font-serif font-bold text-ink">Business Alignment</h1>
         <Button variant="accent" size="sm" onClick={() => setShowCreate(true)}>
           <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -117,9 +117,9 @@ export default function AlignmentPage() {
                     style={{ backgroundColor: goal.color }}
                   />
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-text-primary">{goal.title}</h3>
+                    <h3 className="text-sm font-medium text-ink">{goal.title}</h3>
                     {goal.description && (
-                      <p className="text-xs text-text-secondary mt-1 line-clamp-2">{goal.description}</p>
+                      <p className="text-xs text-neutral-dark mt-1 line-clamp-2">{goal.description}</p>
                     )}
                   </div>
                 </div>
@@ -128,7 +128,7 @@ export default function AlignmentPage() {
                   <button
                     onClick={() => handleMoveUp(goal, idx)}
                     disabled={idx === 0}
-                    className="p-1 text-text-muted hover:text-text-primary disabled:opacity-30 transition-colors"
+                    className="p-1 text-neutral-light hover:text-ink disabled:opacity-30 transition-colors"
                     title="Move up"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -138,7 +138,7 @@ export default function AlignmentPage() {
                   <button
                     onClick={() => handleMoveDown(goal, idx)}
                     disabled={idx === goals.length - 1}
-                    className="p-1 text-text-muted hover:text-text-primary disabled:opacity-30 transition-colors"
+                    className="p-1 text-neutral-light hover:text-ink disabled:opacity-30 transition-colors"
                     title="Move down"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -148,7 +148,7 @@ export default function AlignmentPage() {
                   <div className="flex-1" />
                   <button
                     onClick={() => setEditGoal(goal)}
-                    className="p-1 text-text-muted hover:text-accent-gold transition-colors"
+                    className="p-1 text-neutral-light hover:text-blue-ribbon transition-colors"
                     title="Edit"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -172,32 +172,32 @@ export default function AlignmentPage() {
           {/* Alignment Matrix */}
           {ideas.length > 0 && goals.length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-text-primary mb-4">Alignment Matrix</h2>
-              <div className="overflow-x-auto rounded-lg border border-border-default">
+              <h2 className="text-lg font-medium text-ink mb-4">Alignment Matrix</h2>
+              <div className="overflow-x-auto rounded-lg border border-border">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="bg-surface-deep">
-                      <th className="text-left px-3 py-2 font-semibold text-text-primary sticky left-0 bg-surface-deep min-w-[200px]">
+                    <tr className="bg-neutral-off-white">
+                      <th className="text-left px-3 py-2 font-normal text-ink sticky left-0 bg-neutral-off-white min-w-[200px]">
                         Idea
                       </th>
                       {goals.map((g) => (
-                        <th key={g.id} className="px-3 py-2 text-center font-semibold text-text-primary min-w-[90px]">
+                        <th key={g.id} className="px-3 py-2 text-center font-normal text-ink min-w-[90px]">
                           <div className="flex items-center justify-center gap-1">
                             <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: g.color }} />
                             <span className="truncate">{g.title}</span>
                           </div>
                         </th>
                       ))}
-                      <th className="px-3 py-2 text-center font-semibold text-accent-gold min-w-[70px]">
+                      <th className="px-3 py-2 text-center font-normal text-blue-ribbon min-w-[70px]">
                         Avg
                       </th>
                     </tr>
                   </thead>
                   <tbody>
                     {scoredIdeas.map(({ idea, aggregate }) => (
-                      <tr key={idea.id} className="border-t border-border-subtle hover:bg-surface-deep/50">
-                        <td className="px-3 py-2 sticky left-0 bg-surface-panel">
-                          <Link href={`/ideas/${idea.id}`} className="text-text-primary hover:text-accent-gold font-medium truncate block max-w-[200px]">
+                      <tr key={idea.id} className="border-t border-border hover:bg-neutral-off-white/50">
+                        <td className="px-3 py-2 sticky left-0 bg-white">
+                          <Link href={`/ideas/${idea.id}`} className="text-ink hover:text-blue-ribbon font-normal truncate block max-w-[200px]">
                             {idea.title || "Untitled"}
                           </Link>
                         </td>
@@ -207,7 +207,7 @@ export default function AlignmentPage() {
                             <td key={g.id} className="px-3 py-2 text-center">
                               {score ? (
                                 <span
-                                  className="inline-block px-1.5 py-0.5 rounded text-xs font-bold"
+                                  className="inline-block px-1.5 py-0.5 rounded text-xs font-normal"
                                   style={{
                                     color: getScoreColor(score.score),
                                     backgroundColor: `${getScoreColor(score.score)}15`,
@@ -224,7 +224,7 @@ export default function AlignmentPage() {
                         <td className="px-3 py-2 text-center">
                           {aggregate !== null ? (
                             <span
-                              className="font-bold"
+                              className="font-normal"
                               style={{ color: getScoreColor(aggregate) }}
                             >
                               {aggregate}
@@ -310,7 +310,7 @@ function GoalModal({
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Goal Title</label>
+          <label className="block text-xs font-normal text-text-secondary mb-1">Goal Title</label>
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -319,7 +319,7 @@ function GoalModal({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Description</label>
+          <label className="block text-xs font-normal text-text-secondary mb-1">Description</label>
           <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -329,7 +329,7 @@ function GoalModal({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Color</label>
+          <label className="block text-xs font-normal text-text-secondary mb-1">Color</label>
           <div className="flex gap-2 flex-wrap">
             {GOAL_COLORS.map((c) => (
               <button

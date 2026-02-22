@@ -1,17 +1,37 @@
 "use client";
 
+import { useMemo } from "react";
 import { usePriorArt } from "@/hooks/usePriorArt";
 import { SearchForm } from "@/components/prior-art/SearchForm";
 import { PatentResultCard } from "@/components/prior-art/PatentResultCard";
 import { EmptyState } from "@/components/ui";
+import { ChatPanel, ChatToggleButton } from "@/components/chat/ChatPanel";
+import type { ChatContext } from "@/lib/types";
 
 export default function PriorArtPage() {
   const { results, search, loading, error } = usePriorArt();
 
+  const chatContext: ChatContext = useMemo(
+    () => ({
+      type: "prior-art",
+      id: null,
+      label: "Prior Art Search",
+      data: {
+        query: results.length > 0 ? "Prior art search" : "",
+        results: results.slice(0, 10).map((r) => ({
+          patentNumber: r.patentNumber,
+          title: r.title,
+          abstract: r.abstract,
+        })),
+      },
+    }),
+    [results]
+  );
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-display font-bold text-text-primary">Prior Art Search</h1>
+        <h1 className="text-2xl font-serif font-bold text-ink">Prior Art Search</h1>
       </div>
 
       <div className="max-w-3xl mb-6">
@@ -40,6 +60,9 @@ export default function PriorArtPage() {
           description="Enter a query to search Google Patents filtered by software CPC classes."
         />
       ) : null}
+
+      <ChatToggleButton context={chatContext} />
+      <ChatPanel context={chatContext} />
     </div>
   );
 }

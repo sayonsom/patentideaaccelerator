@@ -1071,5 +1071,390 @@ Phase 5: Moat
   - Provisional patent application generator (attorney review required)
 
 ================================================================================
+APPENDIX A — PORTFOLIO INTELLIGENCE (Inspired by DeepIP competitive analysis)
+================================================================================
+
+Competitive context: DeepIP.ai charges $600/seat/mo for portfolio management,
+landscaping, and continuation assistance. Their tool is POST-invention (manage
+existing patents). We are PRE-invention (help engineers create new IP). These
+appendices define features that bridge the gap — giving our users downstream
+visibility without leaving the platform.
+
+-------------------------------------------------------------------------------
+A.1 Patent Portfolio Dashboard
+-------------------------------------------------------------------------------
+
+PAGE: /portfolio (new route, Phase 3+)
+
+Purpose: Let users and teams track their filed ideas as a lightweight patent
+portfolio — bridging the gap between ideation (our core) and portfolio
+management (DeepIP's core).
+
+Features:
+  - Portfolio creation by:
+      * Promoting filed ideas from /ideas (status = "filed")
+      * Manual entry of existing patent numbers (comma/line separated)
+      * Import from CSV/JSON with patent numbers
+  - Portfolio table view:
+      * Columns: Title, Patent Number (if filed), Status, Filing Date,
+        CPC Classes, Alice Score, Inventive Step Score, Tags
+      * Sortable, filterable, paginated (20/page)
+      * Wrap/truncate text toggle
+      * Direct links to Google Patents for filed patents
+      * Expandable rows showing related family members (if data available)
+  - Portfolio summary cards:
+      * Total ideas / Filed / Pending / Archived
+      * Average Alice score
+      * CPC class distribution (bar chart)
+      * Filing trend over time (line chart)
+
+Backend:
+  POST   /api/v1/portfolios                # body: {name, description?}
+  GET    /api/v1/portfolios                # list user's portfolios
+  GET    /api/v1/portfolios/{id}           # portfolio detail + summary stats
+  GET    /api/v1/portfolios/{id}/ideas     # paginated ideas in portfolio
+  POST   /api/v1/portfolios/{id}/ideas     # add ideas to portfolio (by idea_id or patent_number)
+  DELETE /api/v1/portfolios/{id}/ideas/{idea_id}
+
+Data model:
+  portfolios (
+    id UUID PK,
+    user_id UUID FK → users,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ
+  )
+  portfolio_ideas (
+    portfolio_id UUID FK → portfolios,
+    idea_id UUID FK → ideas,
+    external_patent_number VARCHAR(50),  -- for patents not originated here
+    added_at TIMESTAMPTZ,
+    PRIMARY KEY (portfolio_id, idea_id)
+  )
+
+Priority: Phase 3 (after core ideation is solid)
+Effort: ~2 weeks
+
+-------------------------------------------------------------------------------
+A.2 Chat-with-Context (AI Conversational Layer)
+-------------------------------------------------------------------------------
+
+PAGE: Panel on /ideas/[id], /portfolio, /prior-art (slide-out right panel)
+
+Purpose: DeepIP's strongest UX pattern — every module has a chat panel. We add
+conversational AI over our data, but anchored to IDEATION use cases, not just
+portfolio Q&A.
+
+Features:
+  - Slide-out chat panel (toggle button on right edge)
+  - Context-aware: knows the current idea, portfolio, or search results
+  - Suggested prompts per context:
+      On /ideas/[id]:
+        "How can I strengthen the inventive step?"
+        "What are the Alice/101 risks in this claim?"
+        "Suggest prior art search queries for this idea"
+        "Rewrite the technical approach to be more specific"
+        "What dependent claims could I add?"
+      On /portfolio:
+        "What technology areas are underrepresented?"
+        "Which ideas have the weakest Alice scores?"
+        "Suggest continuation directions for my strongest patents"
+        "Are there whitespace opportunities given my portfolio?"
+      On /prior-art:
+        "How does my idea differ from these results?"
+        "Which of these patents is most threatening?"
+        "Suggest ways to design around patent X"
+  - Chat history persisted per context (idea, portfolio, search session)
+  - "Add to context" — bring additional ideas or search results into the
+    conversation for cross-reference analysis
+  - Web search toggle (optional, for pulling in non-patent references)
+
+Backend:
+  POST   /api/v1/chat                     # body: {context_type, context_id, message, history_id?}
+  GET    /api/v1/chat/history/{id}        # retrieve conversation history
+  DELETE /api/v1/chat/history/{id}        # clear conversation
+
+  context_type: "idea" | "portfolio" | "prior_art_session" | "general"
+  context_id: UUID of the relevant entity
+
+  The backend assembles context (idea data, portfolio summary, search results)
+  and passes it to Claude as system context alongside the user's message.
+
+Data model:
+  chat_histories (
+    id UUID PK,
+    user_id UUID FK → users,
+    context_type VARCHAR(50),
+    context_id UUID,
+    messages JSONB DEFAULT '[]',  -- [{role, content, timestamp}]
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ
+  )
+
+Frontend component:
+  ChatPanel.tsx — slide-out panel with:
+    - Message list (user/assistant bubbles)
+    - Input box with send button
+    - Suggested prompt chips (context-dependent)
+    - "Add to context" button
+    - Minimize/maximize toggle
+    - Streaming response support (SSE from backend)
+
+Priority: Phase 2 (high value, moderate effort)
+Effort: ~3 weeks
+
+-------------------------------------------------------------------------------
+A.3 Patent Landscaping
+-------------------------------------------------------------------------------
+
+PAGE: /landscaping (new route, Phase 3+)
+
+Purpose: DeepIP's landscaping uses a 3-step wizard to explore a technology
+area. We adapt this for PRE-FILING intelligence — help engineers understand
+the patent landscape BEFORE they file, so they can differentiate.
+
+Features:
+  Step 1: "Describe the technology space"
+    - Textarea: natural language query (e.g., "distributed ML inference on
+      edge devices")
+    - Quick-fill example buttons for common domains
+    - Tech stack tags (reuse from idea creation)
+
+  Step 2: "AI-generated taxonomy"
+    - AI generates 8-12 related search queries (taxonomy)
+    - Examples: "edge ML inference patents", "model compression for IoT",
+      "federated learning on resource-constrained devices"
+    - User can select/deselect, edit, delete, or add custom queries
+    - Each query is a potential patent search axis
+
+  Step 3: "Landscape results"
+    - Aggregated patent results from all selected taxonomy queries
+    - Table view: Patent Number, Title, Priority Date, Assignee, CPC Class
+    - Sortable, filterable, paginated (limit 500 results)
+    - Google Patents links
+    - Landscape visualization:
+        * CPC class distribution (treemap or bar chart)
+        * Filing trend over time (area chart)
+        * Top assignees (horizontal bar chart)
+        * Technology cluster map (if feasible — 2D scatter via embeddings)
+    - Chat panel with landscape-specific prompts:
+        "Which companies dominate this space?"
+        "Where are the whitespace opportunities?"
+        "How does my idea X differentiate from this landscape?"
+        "What jurisdictions show the strongest activity?"
+
+  Session management:
+    - Save/resume landscape sessions
+    - Delete old sessions
+    - Compare two landscape sessions side-by-side (stretch goal)
+
+Backend:
+  POST   /api/v1/landscaping/sessions              # body: {query, tech_stack?}
+  GET    /api/v1/landscaping/sessions               # list sessions
+  GET    /api/v1/landscaping/sessions/{id}          # session detail (query, taxonomy, state)
+  PUT    /api/v1/landscaping/sessions/{id}          # update taxonomy selections, advance step
+  GET    /api/v1/landscaping/sessions/{id}/patents  # paginated results (?offset=0&limit=100)
+  DELETE /api/v1/landscaping/sessions/{id}
+
+  POST   /api/v1/landscaping/sessions/{id}/generate-taxonomy
+    # AI generates taxonomy queries → returns list of {query, selected: true}
+
+Data model:
+  landscaping_sessions (
+    id UUID PK,
+    user_id UUID FK → users,
+    query TEXT NOT NULL,
+    tech_stack JSONB DEFAULT '[]',
+    taxonomy JSONB DEFAULT '[]',     -- [{query: str, selected: bool, edited: bool}]
+    state VARCHAR(50) DEFAULT 'input',  -- input|taxonomy|results
+    patent_count INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ
+  )
+  landscaping_patents (
+    id UUID PK,
+    session_id UUID FK → landscaping_sessions,
+    patent_number VARCHAR(50),
+    title TEXT,
+    abstract TEXT,
+    priority_date DATE,
+    assignee VARCHAR(500),
+    cpc_classes JSONB DEFAULT '[]',
+    source_query TEXT,               -- which taxonomy query found this
+    relevance_score FLOAT,
+    url TEXT
+  )
+
+Priority: Phase 3 (after portfolio, complements prior art search)
+Effort: ~4 weeks
+
+-------------------------------------------------------------------------------
+A.4 AI-Powered Magic Columns (Computed Insights)
+-------------------------------------------------------------------------------
+
+Context: DeepIP allows "magic columns" — AI-generated computed columns added
+to patent tables. We adapt this for our ideas table and portfolio views.
+
+Features:
+  - On /ideas and /portfolio table views, user can click "+ Magic Column"
+  - Choose from presets or write custom:
+      Presets:
+        "Technology Category" — AI classifies each idea into a tech taxonomy
+        "Pruning Opportunity" — flags ideas unlikely to result in strong patents
+        "Claim Strength" — estimates strength of claim language (weak/medium/strong)
+        "Competitive Overlap" — estimates how crowded the patent space is
+        "Commercial Value" — estimates potential licensing/product value
+      Custom: free-text prompt, e.g., "Rate each idea's relevance to autonomous vehicles"
+  - Magic column values computed asynchronously (batch process via backend)
+  - Values cached and displayed as a new column in the table
+  - Re-compute on demand (stale after idea update)
+
+Backend:
+  POST   /api/v1/magic-columns                # body: {scope: "ideas"|"portfolio", scope_id?, preset_or_prompt}
+  GET    /api/v1/magic-columns                # list user's magic columns
+  GET    /api/v1/magic-columns/{id}           # column definition + computed values
+  POST   /api/v1/magic-columns/{id}/compute   # trigger (re)computation → 202 Accepted
+  DELETE /api/v1/magic-columns/{id}
+
+Data model:
+  magic_columns (
+    id UUID PK,
+    user_id UUID FK → users,
+    scope VARCHAR(50),            -- "ideas" or "portfolio"
+    scope_id UUID,                -- portfolio_id if scope = "portfolio", null for all ideas
+    name VARCHAR(255),
+    prompt TEXT,                   -- the AI prompt used to compute values
+    preset VARCHAR(100),           -- null if custom
+    status VARCHAR(50) DEFAULT 'pending',  -- pending|computing|ready|error
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ
+  )
+  magic_column_values (
+    magic_column_id UUID FK → magic_columns,
+    idea_id UUID FK → ideas,
+    value TEXT,                    -- the AI-generated value for this idea
+    computed_at TIMESTAMPTZ,
+    PRIMARY KEY (magic_column_id, idea_id)
+  )
+
+Priority: Phase 4 (nice-to-have, impressive demo feature)
+Effort: ~2 weeks
+
+-------------------------------------------------------------------------------
+A.5 Continuation Direction Assistant
+-------------------------------------------------------------------------------
+
+Context: DeepIP offers a continuation assistant for existing patents. We adapt
+this for our "filed" ideas — suggesting how to extend a filed patent into
+continuations or continuations-in-part.
+
+Features:
+  - Available on /ideas/[id] when status = "filed" or idea has patent_number
+  - Button: "Explore Continuation Directions"
+  - AI analyzes:
+      * Original claims (from claim_method, claim_system, claim_crm)
+      * Prior art search results (if available)
+      * Framework data (contradictions resolved, principles used)
+      * Related ideas in the same portfolio
+  - Generates 3-5 continuation directions, each with:
+      * Direction title
+      * Rationale (why this is a viable continuation)
+      * New claims sketch (1-2 new independent claims)
+      * Estimated additional Alice risk
+      * Relationship to original patent (broadening / narrowing / CIP)
+  - User can promote a direction into a new idea (pre-filled with continuation data)
+
+Backend:
+  POST   /api/v1/ideas/{id}/continuations     # generate continuation directions
+  GET    /api/v1/ideas/{id}/continuations      # cached results
+  POST   /api/v1/ideas/{id}/continuations/{direction_idx}/promote
+    # creates a new idea from the continuation direction, linked to parent
+
+Data model:
+  continuation_results (
+    id UUID PK,
+    idea_id UUID FK → ideas,
+    directions JSONB NOT NULL,     -- array of continuation direction objects
+    generated_at TIMESTAMPTZ
+  )
+
+  Add to ideas table:
+    parent_idea_id UUID FK → ideas NULL   -- links continuation to original
+    continuation_type VARCHAR(50) NULL     -- continuation|cip|divisional
+
+Priority: Phase 4 (after portfolio + landscaping)
+Effort: ~2 weeks
+
+
+================================================================================
+APPENDIX B — COMPETITIVE POSITIONING NOTES
+================================================================================
+
+These notes document our strategic differentiation vs DeepIP and other IP tools.
+Reference when making product decisions.
+
+-------------------------------------------------------------------------------
+B.1 Market Positioning
+-------------------------------------------------------------------------------
+
+                    PRE-INVENTION              POST-INVENTION
+                    (idea → filing)            (filing → management)
+                    ┌─────────────────┐        ┌─────────────────┐
+                    │ Patent Idea     │        │ DeepIP          │
+                    │ Accelerator     │───────▶│ ($600/seat/mo)  │
+                    │                 │        │                 │
+                    │ • Ideation      │ hand   │ • Portfolio mgmt│
+                    │ • Frameworks    │ off    │ • Landscaping   │
+                    │ • Alice scoring │        │ • Continuation  │
+                    │ • Claim drafting│        │ • Invalidity    │
+                    │ • Prior art     │        │ • FTO           │
+                    └─────────────────┘        └─────────────────┘
+
+We OWN the left box. Appendix A features let us nibble into the right box
+without going head-to-head.
+
+-------------------------------------------------------------------------------
+B.2 Pricing Signal
+-------------------------------------------------------------------------------
+
+DeepIP: $600/seat/month → validates premium IP tooling market
+Our positioning:
+  - Free tier: 10 ideas/mo, 5 AI calls/mo (lead gen, individual hackers)
+  - Pro: $49-99/mo (individual engineer, unlimited ideation + AI)
+  - Team: $29-49/seat/mo (sprint collaboration, shared portfolios)
+  - Enterprise: custom (SSO, custom principles, API access, $200-400/seat/mo)
+
+Key insight: our buyer (VP Eng) pays DeepIP $600/seat for patent LAWYERS.
+They'll pay $49-99/seat for ENGINEERS who actually generate the IP.
+Different budget line (engineering tools vs legal tools).
+
+-------------------------------------------------------------------------------
+B.3 Features We Explicitly Do NOT Build (leave to DeepIP / patent counsel)
+-------------------------------------------------------------------------------
+
+  - Invalidity analysis (attacking competitor patents) → legal workflow
+  - Freedom-to-Operate analysis → requires attorney judgment
+  - Full patent prosecution workflow → not our domain
+  - Patent family management at scale (1000+ patents) → portfolio tools
+  - Microsoft Word Add-in → our users are in IDEs, not Word
+  - Datadog/Segment-level analytics → overkill for our scale
+
+-------------------------------------------------------------------------------
+B.4 Features to Borrow (adapted for engineer audience)
+-------------------------------------------------------------------------------
+
+  DEEPIP FEATURE                OUR ADAPTATION                      PRIORITY
+  ─────────────────────────────────────────────────────────────────────────────
+  Chat-with-portfolio           Chat-with-idea / Chat-with-context  Phase 2
+  Magic columns                 AI computed columns on idea tables   Phase 4
+  Taxonomy generation           Landscape taxonomy for prior art     Phase 3
+  Session-based workflows       Already have (sprints + ideas)       Done
+  Patent family grouping        Continuation linking (parent→child)  Phase 4
+  PDF upload + extraction       Document upload + AI extraction      Phase 3
+  Standard data columns         Extended idea table columns          Phase 2
+  Google Patents links          Already planned in prior art         Phase 1
+
+================================================================================
 END OF SPEC
 ================================================================================

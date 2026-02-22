@@ -1,7 +1,6 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -10,50 +9,65 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Semantic surface colors
+        // ─── McKinsey Primary ─────────────────────────
+        "blue-ribbon": "#2251FF",
+        "black-pearl": "#051C2C",
+        ink: "#051C2C",
+
+        // ─── McKinsey Secondary ───────────────────────
+        "stellar-explorer": "#051C2A",
+        "mondrian-blue": "#163E93",
+        dayflower: "#30A3DA",
+        marine: "#053259",
+        "rhapsody-blue": "#042440",
+
+        // ─── McKinsey Accent ──────────────────────────
+        "mack-creek": "#BFAE5A",
+        "crusade-king": "#D9C666",
+        "yellow-warning": "#F3C13A",
+
+        // ─── McKinsey Neutral ─────────────────────────
+        "cotton-field": "#F2F0E9",
+        "neutral-off-white": "#F5F5F5",
+        "neutral-light": "#A2AAAD",
+        "neutral-dark": "#222222",
+        "armor-wash": "#060200",
+
+        // ─── Semantic Surface (Light Mode) ────────────
         surface: {
           DEFAULT: "#FFFFFF",
-          panel: "#F5F7FA",
-          deep: "#020617",
-          card: "#0f172a",
-          elevated: "#1e293b",
-          dark: "#0b1120",
+          secondary: "#F5F5F5",
+          tertiary: "#F2F0E9",
+          elevated: "#FFFFFF",
         },
+
+        // ─── Semantic Border ──────────────────────────
         border: {
-          DEFAULT: "#1e293b",
-          grid: "#E5E7EB",
-          axis: "#D1D5DB",
-          hover: "#334155",
+          DEFAULT: "#E5E7EB",
+          strong: "#A2AAAD",
+          hover: "#051C2C",
         },
+
+        // ─── Semantic Text ────────────────────────────
         text: {
-          primary: "#f8fafc",
-          secondary: "#e2e8f0",
-          muted: "#94a3b8",
-          dim: "#64748b",
-          faint: "#475569",
+          primary: "#051C2C",
+          secondary: "#222222",
+          muted: "#A2AAAD",
+          inverse: "#FFFFFF",
         },
-        // Dark mode overrides (accessible via dark: prefix)
-        dark: {
-          surface: "#0B1220",
-          panel: "#111827",
-          grid: "#1F2933",
-          axis: "#374151",
-          textPrimary: "#E5E7EB",
-          textSecondary: "#9CA3AF",
-        },
-        // Accent colors
+
+        // ─── Functional Accents ───────────────────────
         accent: {
-          DEFAULT: "#1F4CEB",
-          gold: "#f59e0b",
-          blue: "#3b82f6",
-          green: "#10b981",
-          red: "#ef4444",
-          purple: "#8b5cf6",
-          pink: "#ec4899",
-          cyan: "#06b6d4",
-          orange: "#f97316",
+          DEFAULT: "#2251FF",
+          hover: "#1A41CC",
+          light: "#E8EEFF",
         },
-        // Series colors for charts/badges (resolved via CSS vars)
+
+        success: "#2E6F4E",
+        warning: "#F3C13A",
+        danger: "#B91C1C",
+
+        // ─── Series colors (charts/badges via CSS vars) ──
         series: {
           1: "var(--series-1)",
           2: "var(--series-2)",
@@ -64,15 +78,10 @@ const config: Config = {
           7: "var(--series-7)",
           8: "var(--series-8)",
         },
-        // Semantic aliases
-        success: "#2E6F4E",
-        warning: "#C69214",
-        danger: "#7A2E2E",
       },
       fontFamily: {
-        body: ["var(--font-body)", "sans-serif"],
-        display: ["var(--font-display)", "serif"],
-        mono: ["var(--font-mono)", "monospace"],
+        serif: ["var(--font-serif)", "Georgia", "serif"],
+        sans: ["var(--font-sans)", "Arial", "Helvetica", "sans-serif"],
       },
       animation: {
         "fade-in": "fadeIn 0.3s ease-out",
@@ -89,6 +98,13 @@ const config: Config = {
           from: { opacity: "0", transform: "translateY(16px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
+      },
+      spacing: {
+        18: "4.5rem",
+        22: "5.5rem",
+      },
+      maxWidth: {
+        prose: "750px",
       },
     },
   },

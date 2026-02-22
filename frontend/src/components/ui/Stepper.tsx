@@ -24,33 +24,33 @@ export function Stepper({ steps, currentStep, onStepClick }: StepperProps) {
             {index > 0 && (
               <div
                 className={`w-8 h-px ${
-                  isCompleted ? "bg-accent-gold" : "bg-border"
+                  isCompleted ? "bg-blue-ribbon" : "bg-border"
                 }`}
               />
             )}
             <button
               onClick={() => onStepClick?.(index)}
               className={`
-                flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all
+                flex items-center gap-2 px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all
                 ${
                   isActive
-                    ? "bg-accent-gold/10 text-accent-gold border border-accent-gold/30"
+                    ? "bg-accent-light text-blue-ribbon border border-blue-ribbon/30"
                     : isCompleted
-                    ? "text-accent-green"
-                    : "text-text-muted hover:text-text-primary"
+                    ? "text-success"
+                    : "text-text-muted hover:text-ink"
                 }
               `}
               type="button"
             >
               <span
                 className={`
-                  flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold
+                  flex items-center justify-center w-6 h-6 rounded-full text-xs font-normal
                   ${
                     isActive
-                      ? "bg-accent-gold text-surface-deep"
+                      ? "bg-blue-ribbon text-white"
                       : isCompleted
-                      ? "bg-accent-green/20 text-accent-green"
-                      : "bg-surface-elevated text-text-dim"
+                      ? "bg-green-50 text-success"
+                      : "bg-neutral-off-white text-text-muted"
                   }
                 `}
               >
@@ -58,7 +58,7 @@ export function Stepper({ steps, currentStep, onStepClick }: StepperProps) {
               </span>
               <span className="hidden sm:inline">{step.label}</span>
               {step.optional && (
-                <span className="text-[10px] text-text-faint">(opt)</span>
+                <span className="text-[10px] text-neutral-light">(opt)</span>
               )}
             </button>
           </div>

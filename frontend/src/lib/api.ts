@@ -5,7 +5,7 @@
  * Settings remain in localStorage (per-device, sensitive).
  */
 
-import type { Idea, Sprint, Team, User, IdeaStatus, BusinessGoal, AlignmentScore } from "./types";
+import type { Idea, Sprint, SprintMemberRecord, Team, User, IdeaStatus, SessionMode, SprintPhase, BusinessGoal, AlignmentScore, AIProvider } from "./types";
 import {
   listIdeasAction,
   getIdeaAction,
@@ -13,6 +13,13 @@ import {
   updateIdeaAction,
   deleteIdeaAction,
   filterIdeasAction,
+  listTeamIdeasAction,
+  listPersonalIdeasAction,
+  canAccessIdea as canAccessIdeaAction,
+  listSprintIdeasAction,
+  listCandidateIdeasForSprint,
+  linkIdeaToSprint as linkIdeaToSprintAction,
+  unlinkIdeaFromSprint as unlinkIdeaFromSprintAction,
 } from "./actions/ideas";
 import {
   getUserById,
@@ -20,10 +27,14 @@ import {
 } from "./actions/users";
 import {
   listSprintsAction,
+  listAccessibleSprintsAction,
   getSprintAction,
   createSprintAction,
   updateSprintAction,
   deleteSprintAction,
+  addSprintMember,
+  removeSprintMember,
+  listSprintMembers as listSprintMembersAction,
 } from "./actions/sprints";
 import {
   getTeamForSprint,
@@ -44,10 +55,16 @@ import {
 const SETTINGS_KEY = "voltedge:settings";
 
 export interface AppSettings {
-  anthropicApiKey: string;
+  provider: AIProvider;
+  keys: Record<AIProvider, string | null>;
+  // Legacy field for migration
+  anthropicApiKey?: string;
 }
 
-const DEFAULT_SETTINGS: AppSettings = { anthropicApiKey: "" };
+const DEFAULT_SETTINGS: AppSettings = {
+  provider: "anthropic",
+  keys: { anthropic: null, openai: null, google: null },
+};
 
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -119,10 +136,26 @@ export async function filterIdeas(
   return filterIdeasAction(userId, opts);
 }
 
+export async function listTeamIdeas(teamId: string): Promise<Idea[]> {
+  return listTeamIdeasAction(teamId);
+}
+
+export async function listPersonalIdeas(userId: string): Promise<Idea[]> {
+  return listPersonalIdeasAction(userId);
+}
+
+export async function canAccessIdea(userId: string, ideaId: string): Promise<boolean> {
+  return canAccessIdeaAction(userId, ideaId);
+}
+
 // ─── Sprints (Prisma) ───────────────────────────────────────────
 
 export async function listSprints(ownerId: string): Promise<Sprint[]> {
   return listSprintsAction(ownerId);
+}
+
+export async function listAccessibleSprints(userId: string): Promise<Sprint[]> {
+  return listAccessibleSprintsAction(userId);
 }
 
 export async function getSprint(id: string): Promise<Sprint | null> {
@@ -133,19 +166,56 @@ export async function createSprint(data: {
   id?: string;
   name: string;
   ownerId: string;
+  teamId?: string;
+  description?: string;
+  theme?: string;
+  sessionMode?: SessionMode;
+  phase?: SprintPhase;
 }): Promise<Sprint> {
   return createSprintAction(data);
 }
 
 export async function updateSprint(
   id: string,
-  updates: Partial<Pick<Sprint, "name" | "status" | "sessionMode" | "phase" | "timerSecondsRemaining" | "timerRunning" | "startedAt">>
+  updates: Partial<Pick<Sprint, "name" | "description" | "theme" | "status" | "sessionMode" | "phase" | "timerSecondsRemaining" | "timerRunning" | "startedAt">>
 ): Promise<Sprint | null> {
   return updateSprintAction(id, updates);
 }
 
 export async function deleteSprint(id: string): Promise<boolean> {
   return deleteSprintAction(id);
+}
+
+// ─── Sprint Members (Prisma) ───────────────────────────────────
+
+export async function addMemberToSprint(sprintId: string, userId: string, role?: string): Promise<void> {
+  return addSprintMember(sprintId, userId, role);
+}
+
+export async function removeMemberFromSprint(sprintId: string, userId: string): Promise<void> {
+  return removeSprintMember(sprintId, userId);
+}
+
+export async function listSprintMembers(sprintId: string): Promise<SprintMemberRecord[]> {
+  return listSprintMembersAction(sprintId);
+}
+
+// ─── Sprint-Idea Linking (Prisma) ──────────────────────────────
+
+export async function listSprintIdeas(sprintId: string): Promise<Idea[]> {
+  return listSprintIdeasAction(sprintId);
+}
+
+export async function listCandidateIdeas(sprintId: string): Promise<Idea[]> {
+  return listCandidateIdeasForSprint(sprintId);
+}
+
+export async function linkToSprint(ideaId: string, sprintId: string): Promise<Idea | null> {
+  return linkIdeaToSprintAction(ideaId, sprintId);
+}
+
+export async function unlinkFromSprint(ideaId: string): Promise<Idea | null> {
+  return unlinkIdeaFromSprintAction(ideaId);
 }
 
 // ─── Teams (Prisma — reconstructed from Sprint + Members + Ideas) ─

@@ -14,20 +14,153 @@ datasource db {
 // ─── Users ─────────────────────────────────────────────────────────
 
 model User {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  name       String
-  cognitoSub String?  @unique @map("cognito_sub")
-  interests  Json     @default("[]")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id                 String   @id @default(uuid())
+  email              String   @unique
+  name               String
+  cognitoSub         String?  @unique @map("cognito_sub")
+  interests          Json     @default("[]")
+  accountType        String   @default("personal") @map("account_type") // "personal" | "corporate"
+  onboardingComplete Boolean  @default(false) @map("onboarding_complete")
+  experienceAreas    Json     @default("[]") @map("experience_areas")
+  emergingInterests  Json     @default("[]") @map("emerging_interests")
+  promptPreferences  Json?    @map("prompt_preferences") @db.JsonB
+  termsAcceptedAt    DateTime? @map("terms_accepted_at")
+  infraPreferences   Json?    @map("infra_preferences") @db.JsonB // { dataRegion, cloudProvider, aiDataCenter }
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   ideas              Idea[]
   ownedSprints       Sprint[]
   sprintMemberships  SprintMember[]
   businessGoals      BusinessGoal[]
+  orgMemberships     OrgMember[]
+  teamMemberships    TeamMember[]
+  apiKeys            UserApiKey[]
+  chatHistories      ChatHistory[]
+  portfolios         Portfolio[]
+  landscapingSessions LandscapingSession[]
+  magicColumns       MagicColumn[]
 
   @@map("users")
+}
+
+// ─── User API Keys (encrypted at rest) ──────────────────────────
+
+model UserApiKey {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  provider     String   // "anthropic" | "openai" | "google"
+  encryptedKey String   @map("encrypted_key") // AES-256-GCM encrypted
+  keyPrefix    String   @map("key_prefix") // first 7 chars for display (e.g. "sk-ant-...")
+  keySuffix    String   @map("key_suffix") // last 4 chars for display
+  isActive     Boolean  @default(true) @map("is_active") // soft-revoke
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@map("user_api_keys")
+}
+
+// ─── Organizations (Business Entities) ───────────────────────────
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  domain    String?  @unique // e.g. "acme.com" for auto-association
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  members       OrgMember[]
+  teams         Team[]
+  businessGoals BusinessGoal[]
+  invites       OrgInvite[]
+
+  @@map("organizations")
+}
+
+// ─── Organization Members ─────────────────────────────────────────
+
+model OrgMember {
+  orgId    String   @map("org_id")
+  userId   String   @map("user_id")
+  role     String   @default("member") // "business_admin" | "team_admin" | "member"
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([orgId, userId])
+  @@map("org_members")
+}
+
+// ─── Teams ────────────────────────────────────────────────────────
+
+model Team {
+  id        String   @id @default(uuid())
+  name      String
+  orgId     String?  @map("org_id") // optional — teams can exist without an org
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  org     Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  members TeamMember[]
+  ideas   Idea[]
+  sprints Sprint[]
+  invites TeamInvite[]
+
+  @@map("teams")
+}
+
+// ─── Team Members ─────────────────────────────────────────────────
+
+model TeamMember {
+  teamId   String   @map("team_id")
+  userId   String   @map("user_id")
+  role     String   @default("member") // "admin" | "member"
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, userId])
+  @@map("team_members")
+}
+
+// ─── Team Invites ───────────────────────────────────────────────────
+
+model TeamInvite {
+  id        String   @id @default(uuid())
+  teamId    String   @map("team_id")
+  email     String?  // optional — if set, invite is targeted
+  role      String   @default("member") // role to assign on join
+  code      String   @unique // short invite code
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("team_invites")
+}
+
+// ─── Organization Invites ─────────────────────────────────────────
+
+model OrgInvite {
+  id        String   @id @default(uuid())
+  orgId     String   @map("org_id")
+  email     String?  // optional — if set, invite is targeted
+  role      String   @default("member") // role to assign on join
+  code      String   @unique // short invite code
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("org_invites")
 }
 
 // ─── Ideas ─────────────────────────────────────────────────────────
@@ -36,6 +169,7 @@ model Idea {
   id                    String   @id @default(uuid())
   userId                String   @map("user_id")
   sprintId              String?  @map("sprint_id")
+  teamId                String?  @map("team_id") // null = individual idea
   title                 String   @default("")
   problemStatement      String   @default("") @map("problem_statement")
   existingApproach      String   @default("") @map("existing_approach")
@@ -61,16 +195,32 @@ model Idea {
   // Claims (ClaimDraft JSON)
   claimDraft            Json?    @map("claim_draft") @db.JsonB
 
+  // Patent filing analyses
+  inventiveStep         Json?    @map("inventive_step") @db.JsonB
+  marketNeeds           Json?    @map("market_needs") @db.JsonB
+  patentReport          Json?    @map("patent_report") @db.JsonB
+
   // Red team
   redTeamNotes          String   @default("") @map("red_team_notes")
+
+  // Continuation tracking (nullable — only set on child ideas)
+  parentIdeaId          String?  @map("parent_idea_id")
+  continuationType      String?  @map("continuation_type") // "continuation-in-part" | "divisional" | "design-around" | "improvement"
 
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
 
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   sprint                Sprint?  @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  team                  Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  parentIdea            Idea?    @relation("IdeaContinuations", fields: [parentIdeaId], references: [id], onDelete: SetNull)
+  childIdeas            Idea[]   @relation("IdeaContinuations")
   priorArtSearches      PriorArtResult[]
   alignmentScores       AlignmentScore[]
+  portfolioEntries      PortfolioIdea[]
+  continuationResults   ContinuationResult[]
+  promotedContinuations ContinuationResult[] @relation("PromotedIdea")
+  magicColumnValues     MagicColumnValue[]
 
   @@map("ideas")
 }
@@ -81,6 +231,9 @@ model Sprint {
   id                    String    @id @default(uuid())
   name                  String
   ownerId               String    @map("owner_id")
+  teamId                String?   @map("team_id") // scoped to team
+  description           String    @default("")
+  theme                 String    @default("")
   status                String    @default("active")
   sessionMode           String    @default("quantity") @map("session_mode")
   phase                 String    @default("foundation")
@@ -91,6 +244,7 @@ model Sprint {
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
   owner                 User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  team                  Team?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
   ideas                 Idea[]
   members               SprintMember[]
 
@@ -130,6 +284,7 @@ model PriorArtResult {
 model BusinessGoal {
   id          String   @id @default(uuid())
   userId      String   @map("user_id")
+  orgId       String?  @map("org_id") // null = personal goal, set = org-level goal
   title       String
   description String   @default("")
   color       String   @default("#4F83CC")
@@ -138,6 +293,7 @@ model BusinessGoal {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org              Organization?    @relation(fields: [orgId], references: [id], onDelete: SetNull)
   alignmentScores  AlignmentScore[]
 
   @@map("business_goals")
@@ -157,4 +313,151 @@ model AlignmentScore {
 
   @@unique([ideaId, goalId])
   @@map("alignment_scores")
+}
+
+
+// ─── Portfolios ───────────────────────────────────────────────
+
+model Portfolio {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  description String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ideas PortfolioIdea[]
+
+  @@index([userId])
+  @@map("portfolios")
+}
+
+model PortfolioIdea {
+  id              String   @id @default(uuid())
+  portfolioId     String   @map("portfolio_id")
+  ideaId          String?  @map("idea_id")
+  externalPatentNo String? @map("external_patent_no")
+  externalTitle   String?  @map("external_title")
+  filingDate      DateTime? @map("filing_date")
+  grantDate       DateTime? @map("grant_date")
+  status          String   @default("pending") // "pending" | "filed" | "granted" | "abandoned"
+  notes           String   @default("")
+  cpcClasses      Json     @default("[]") @db.JsonB
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  idea      Idea?     @relation(fields: [ideaId], references: [id], onDelete: SetNull)
+
+  @@index([portfolioId])
+  @@map("portfolio_ideas")
+}
+// ─── Magic Columns ────────────────────────────────────────────
+
+model MagicColumn {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  prompt    String
+  isPreset  Boolean  @default(false) @map("is_preset")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  values MagicColumnValue[]
+
+  @@index([userId])
+  @@map("magic_columns")
+}
+
+model MagicColumnValue {
+  id         String   @id @default(uuid())
+  columnId   String   @map("column_id")
+  ideaId     String   @map("idea_id")
+  value      String   @default("")
+  status     String   @default("pending") // "pending" | "computing" | "done" | "error"
+  computedAt DateTime? @map("computed_at")
+
+  column MagicColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  idea   Idea        @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@unique([columnId, ideaId])
+  @@index([ideaId])
+  @@map("magic_column_values")
+}
+
+// ─── Continuation Results ──────────────────────────────────────
+
+model ContinuationResult {
+  id             String   @id @default(uuid())
+  ideaId         String   @map("idea_id")
+  directionType  String   @map("direction_type") // "continuation-in-part" | "divisional" | "design-around" | "improvement"
+  title          String
+  description    String   @default("")
+  technicalDelta String   @default("") @map("technical_delta")
+  promotedIdeaId String?  @map("promoted_idea_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  idea        Idea  @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  promotedIdea Idea? @relation("PromotedIdea", fields: [promotedIdeaId], references: [id], onDelete: SetNull)
+
+  @@index([ideaId])
+  @@map("continuation_results")
+}
+
+// ─── Landscaping Sessions ──────────────────────────────────────
+
+model LandscapingSession {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  name            String
+  techDescription String   @default("") @map("tech_description")
+  taxonomy        Json     @default("{}") @db.JsonB // LandscapingTaxonomy
+  status          String   @default("draft") // "draft" | "taxonomy_ready" | "searching" | "complete"
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  patents LandscapingPatent[]
+
+  @@index([userId])
+  @@map("landscaping_sessions")
+}
+
+model LandscapingPatent {
+  id             String   @id @default(uuid())
+  sessionId      String   @map("session_id")
+  patentNumber   String   @map("patent_number")
+  title          String   @default("")
+  abstract       String   @default("")
+  filingDate     DateTime? @map("filing_date")
+  cpcClasses     Json     @default("[]") @db.JsonB
+  taxonomyBucket String   @default("") @map("taxonomy_bucket")
+  relevanceScore Float    @default(0) @map("relevance_score")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  session LandscapingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("landscaping_patents")
+}
+
+// ─── Chat Histories ─────────────────────────────────────────────
+
+model ChatHistory {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  contextType String   @map("context_type")  // "idea" | "portfolio" | "prior-art" | "landscaping" | "general"
+  contextId   String?  @map("context_id")
+  title       String   @default("")
+  messages    Json     @default("[]") @db.JsonB // [{id, role, content, timestamp}]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, contextType, contextId])
+  @@map("chat_histories")
 }

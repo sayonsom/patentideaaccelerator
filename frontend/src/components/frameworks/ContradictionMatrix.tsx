@@ -8,6 +8,8 @@ import {
   getParametersByCategory,
 } from "@/lib/software-principles";
 import { Card, Select, Button } from "@/components/ui";
+import { useFrameworkCoach } from "@/hooks/useFrameworkCoach";
+import { AICoachPanel } from "./AICoachPanel";
 import type { SoftwareInventivePrinciple, ParameterCategory } from "@/lib/types";
 
 const CATEGORY_LABELS: Record<ParameterCategory, string> = {
@@ -44,6 +46,7 @@ function buildSelectOptions() {
 export function ContradictionMatrix() {
   const [improvingId, setImprovingId] = useState<number | null>(null);
   const [worseningId, setWorseningId] = useState<number | null>(null);
+  const { coach, coaching, loading, error, clearCoaching } = useFrameworkCoach();
 
   const selectOptions = buildSelectOptions();
 
@@ -58,11 +61,24 @@ export function ContradictionMatrix() {
     setWorseningId(improvingId);
   }
 
+  function handleCoach() {
+    coach({
+      framework: "matrix",
+      worksheetState: {
+        improvingParameter: improvingParam ? `${improvingParam.name} — ${improvingParam.description}` : "",
+        worseningParameter: worseningParam ? `${worseningParam.name} — ${worseningParam.description}` : "",
+        suggestedPrinciples: principles.map((p) => `#${p.id} ${p.name}: ${p.description}`),
+      },
+      focusArea: principles.length > 0 ? "principles" : "contradiction",
+      previousCoaching: coaching ? JSON.stringify(coaching.questions.slice(0, 2)) : null,
+    });
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-display font-bold text-text-primary mb-1">Software Contradiction Matrix</h2>
-        <p className="text-sm text-text-secondary">
+        <h2 className="text-lg font-serif font-bold text-ink mb-1">Software Contradiction Matrix</h2>
+        <p className="text-sm text-neutral-dark">
           Select the parameter you want to <strong className="text-green-400">improve</strong> and the parameter
           that <strong className="text-red-400">worsens</strong> as a result. The matrix suggests inventive principles
           tailored to software engineering.
@@ -72,7 +88,7 @@ export function ContradictionMatrix() {
       {/* Selection */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-green-400 mb-1.5">
+          <label className="block text-sm font-normal text-green-400 mb-1.5">
             Improving Parameter
           </label>
           <Select
@@ -87,7 +103,7 @@ export function ContradictionMatrix() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-red-400 mb-1.5">
+          <label className="block text-sm font-normal text-red-400 mb-1.5">
             Worsening Parameter
           </label>
           <Select
@@ -114,20 +130,20 @@ export function ContradictionMatrix() {
       {/* Trade-off display */}
       {improvingParam && worseningParam && (
         <Card borderColor="#C69214">
-          <h3 className="text-sm font-semibold text-text-primary mb-1">Trade-off</h3>
-          <p className="text-xs text-text-secondary">
-            Improving <span className="text-green-400 font-medium">{improvingParam.name}</span>
+          <h3 className="text-sm font-medium text-ink mb-1">Trade-off</h3>
+          <p className="text-xs text-neutral-dark">
+            Improving <span className="text-green-400 font-normal">{improvingParam.name}</span>
             {" "}typically worsens{" "}
-            <span className="text-red-400 font-medium">{worseningParam.name}</span>.
+            <span className="text-red-400 font-normal">{worseningParam.name}</span>.
           </p>
           <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
             <div>
               <span className="text-text-muted">Example: </span>
-              <span className="text-text-secondary">{improvingParam.exampleTradeoff}</span>
+              <span className="text-neutral-dark">{improvingParam.exampleTradeoff}</span>
             </div>
             <div>
               <span className="text-text-muted">Example: </span>
-              <span className="text-text-secondary">{worseningParam.exampleTradeoff}</span>
+              <span className="text-neutral-dark">{worseningParam.exampleTradeoff}</span>
             </div>
           </div>
         </Card>
@@ -137,7 +153,7 @@ export function ContradictionMatrix() {
       {improvingId && worseningId && principles.length === 0 && (
         <Card>
           <div className="text-center py-4">
-            <p className="text-sm text-text-secondary">
+            <p className="text-sm text-neutral-dark">
               No specific principles mapped for this combination yet.
             </p>
             <p className="text-xs text-text-muted mt-1">
@@ -149,26 +165,26 @@ export function ContradictionMatrix() {
 
       {principles.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-text-primary mb-3">
+          <h3 className="text-sm font-medium text-ink mb-3">
             Suggested Inventive Principles ({principles.length})
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {principles.map((p) => (
               <Card key={p.id} hover>
                 <div className="flex items-start gap-3">
-                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-accent-gold/10 text-accent-gold text-sm font-bold shrink-0">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-accent-light text-blue-ribbon text-sm font-normal shrink-0">
                     {p.id}
                   </span>
                   <div>
-                    <h4 className="text-sm font-semibold text-text-primary">{p.name}</h4>
-                    <p className="text-xs text-text-secondary mt-0.5">{p.description}</p>
+                    <h4 className="text-sm font-medium text-ink">{p.name}</h4>
+                    <p className="text-xs text-neutral-dark mt-0.5">{p.description}</p>
                     {p.softwareExamples.length > 0 && (
                       <div className="mt-2">
                         <span className="text-[10px] text-text-muted font-medium uppercase">Software Examples:</span>
                         <ul className="mt-1 space-y-0.5">
                           {p.softwareExamples.map((ex, i) => (
-                            <li key={i} className="text-xs text-text-secondary flex items-start gap-1">
-                              <span className="text-accent-gold shrink-0">{"\u2022"}</span>
+                            <li key={i} className="text-xs text-neutral-dark flex items-start gap-1">
+                              <span className="text-blue-ribbon shrink-0">{"\u2022"}</span>
                               {ex}
                             </li>
                           ))}
@@ -183,16 +199,27 @@ export function ContradictionMatrix() {
         </div>
       )}
 
+      {/* AI Coach — below principles for deeper exploration */}
+      {(improvingId || worseningId) && (
+        <AICoachPanel
+          coaching={coaching}
+          loading={loading}
+          error={error}
+          onCoach={handleCoach}
+          onClear={clearCoaching}
+        />
+      )}
+
       {/* Quick reference: all parameters */}
       <details className="group">
-        <summary className="text-xs text-text-muted cursor-pointer hover:text-text-secondary">
+        <summary className="text-xs text-text-muted cursor-pointer hover:text-neutral-dark">
           Show all {SOFTWARE_PARAMETERS.length} parameters
         </summary>
         <div className="mt-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5">
           {SOFTWARE_PARAMETERS.map((p) => (
             <div
               key={p.id}
-              className="text-[10px] text-text-secondary px-2 py-1 rounded bg-surface-deep"
+              className="text-[10px] text-neutral-dark px-2 py-1 rounded bg-white"
             >
               <span className="text-text-muted font-mono mr-1">{p.id}.</span>
               {p.name}

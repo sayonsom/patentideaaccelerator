@@ -22,7 +22,7 @@ export default function FrameworksPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-display font-bold text-text-primary">Frameworks</h1>
+        <h1 className="text-2xl font-serif font-bold text-ink">Frameworks</h1>
       </div>
 
       <Tabs tabs={FRAMEWORK_TABS} activeTab={activeTab} onChange={setActiveTab}>

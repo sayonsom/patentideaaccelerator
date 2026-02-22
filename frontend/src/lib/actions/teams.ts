@@ -1,6 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import {
+  requireSession,
+  requireSprintAccess,
+  ForbiddenError,
+} from "@/lib/actions/authorization";
 import type { Team, Member, TeamTimer, Idea, SessionMode, SprintPhase } from "@/lib/types";
 import type { Idea as PrismaIdea } from "@prisma/client";
 
@@ -12,6 +17,7 @@ function mapPrismaIdeaToIdea(row: PrismaIdea): Idea {
     id: row.id,
     userId: row.userId,
     sprintId: row.sprintId,
+    teamId: row.teamId,
     title: row.title,
     problemStatement: row.problemStatement,
     existingApproach: row.existingApproach,
@@ -30,6 +36,9 @@ function mapPrismaIdeaToIdea(row: PrismaIdea): Idea {
     claimDraft: row.claimDraft as Idea["claimDraft"],
     redTeamNotes: row.redTeamNotes,
     alignmentScores: [],
+    inventiveStepAnalysis: (row.inventiveStep as Idea["inventiveStepAnalysis"]) ?? null,
+    marketNeedsAnalysis: (row.marketNeeds as Idea["marketNeedsAnalysis"]) ?? null,
+    patentReport: (row.patentReport as Idea["patentReport"]) ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -42,8 +51,12 @@ function mapPrismaIdeaToIdea(row: PrismaIdea): Idea {
  * and all Ideas belonging to that sprint.
  * Timer fields are mapped from the Sprint model — real-time tick state
  * is managed client-side.
+ *
+ * @secured — Requires sprint access (owner, sprint member, or team member).
  */
 export async function getTeamForSprint(sprintId: string): Promise<Team | null> {
+  await requireSprintAccess(sprintId);
+
   const sprint = await prisma.sprint.findUnique({
     where: { id: sprintId },
     include: {
@@ -94,10 +107,17 @@ export async function getTeamForSprint(sprintId: string): Promise<Team | null> {
 
 // ─── Update Team ─────────────────────────────────────────────────
 
+/**
+ * Update a sprint-based team's fields (name, session mode, phase, data minister).
+ *
+ * @secured — Requires sprint access.
+ */
 export async function updateTeamAction(
   sprintId: string,
   updates: Partial<Pick<Team, "name" | "sessionMode" | "sprintPhase" | "dataMinister">>
 ): Promise<Team | null> {
+  await requireSprintAccess(sprintId);
+
   try {
     // Update sprint-level fields
     const sprintData: Record<string, unknown> = {};
@@ -135,7 +155,18 @@ export async function updateTeamAction(
 
 // ─── List teams for a user ──────────────────────────────────────
 
+/**
+ * List teams (sprint-based) for a user by their SprintMember entries.
+ *
+ * @secured — Requires authentication. Users can only list their own teams.
+ */
 export async function listTeamsForUser(userId: string): Promise<Team[]> {
+  const { userId: sessionUserId } = await requireSession();
+
+  if (userId !== sessionUserId) {
+    throw new ForbiddenError("user data");
+  }
+
   // Find all sprints where the user is a member
   const memberships = await prisma.sprintMember.findMany({
     where: { userId },

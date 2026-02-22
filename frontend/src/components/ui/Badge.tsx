@@ -34,9 +34,9 @@ export function Badge({
         ${className}
       `}
       style={{
-        backgroundColor: variant === "solid" ? (color || "#6B7280") : `${color || "#6B7280"}15`,
-        borderColor: variant === "outline" ? (color || "#6B7280") : undefined,
-        color: variant === "outline" ? (color || "#6B7280") : undefined,
+        backgroundColor: variant === "solid" ? (color || "#A2AAAD") : `${color || "#A2AAAD"}10`,
+        borderColor: variant === "outline" ? (color || "#A2AAAD") : undefined,
+        color: variant === "outline" ? (color || "#222222") : undefined,
       }}
     >
       {children}

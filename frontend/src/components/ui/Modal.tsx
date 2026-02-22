@@ -45,7 +45,7 @@ export function Modal({
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black-pearl/40 backdrop-blur-sm animate-fade-in"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
@@ -53,17 +53,17 @@ export function Modal({
       <div
         className={`
           w-full ${maxWidthClasses[maxWidth]}
-          bg-surface-card border border-border rounded-xl
-          shadow-2xl animate-slide-up
+          bg-white border border-border rounded-lg
+          shadow-xl animate-slide-up
           max-h-[90vh] overflow-y-auto
         `}
       >
         {title && (
           <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-            <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
+            <h2 className="text-lg font-medium text-ink">{title}</h2>
             <button
               onClick={onClose}
-              className="text-text-muted hover:text-text-primary transition-colors text-xl leading-none"
+              className="text-neutral-light hover:text-ink transition-colors text-xl leading-none"
               type="button"
             >
               &times;

@@ -42,11 +42,11 @@ export function AIRefineButton({ field, value, context, onAccept }: AIRefineButt
   // Show comparison when refined text is available
   if (refined) {
     return (
-      <div className="mt-2 rounded-lg border border-accent-gold/30 bg-accent-gold/5 p-3">
-        <div className="text-[10px] font-semibold text-accent-gold uppercase tracking-wider mb-2">
+      <div className="mt-2 rounded-lg border border-blue-ribbon/30 bg-accent-light p-3">
+        <div className="text-[10px] font-medium text-blue-ribbon uppercase tracking-wider mb-2">
           AI Suggestion
         </div>
-        <p className="text-xs text-text-secondary whitespace-pre-wrap mb-3">{refined}</p>
+        <p className="text-xs text-neutral-dark whitespace-pre-wrap mb-3">{refined}</p>
         <div className="flex gap-2">
           <Button variant="accent" size="sm" onClick={handleAccept}>Accept</Button>
           <Button variant="ghost" size="sm" onClick={handleDiscard}>Discard</Button>
@@ -61,7 +61,7 @@ export function AIRefineButton({ field, value, context, onAccept }: AIRefineButt
         onClick={handleRefine}
         disabled={loading || !value.trim()}
         title={!value.trim() ? "Add content first" : "Refine with AI"}
-        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-accent-gold/70 hover:text-accent-gold hover:bg-accent-gold/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-normal text-blue-ribbon/70 hover:text-blue-ribbon hover:bg-accent-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {loading ? (
           <Spinner size="sm" />

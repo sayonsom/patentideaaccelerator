@@ -25,15 +25,40 @@ export const INTEREST_CATEGORIES: Record<string, InterestCategory> = {
     color: "#3b82f6",
     tags: [
       "Cloud Architecture", "Cloud Security", "Kubernetes", "Serverless",
-      "Microservices", "DevOps", "CI/CD", "Edge-Cloud Hybrid",
-      "Distributed Systems", "API Design",
+      "Microservices", "Edge-Cloud Hybrid", "Distributed Systems",
+      "API Design", "Service Mesh", "Multi-Cloud",
     ],
   },
-  Quantum: {
-    color: "#ec4899",
+  "DevOps & Platform": {
+    color: "#0ea5e9",
     tags: [
-      "Quantum Computing", "Quantum ML", "Quantum Cryptography",
-      "Quantum Simulation", "Quantum Error Correction", "NISQ Algorithms",
+      "CI/CD", "Terraform", "Ansible", "GitOps",
+      "SRE", "Observability", "Infrastructure as Code",
+      "Container Orchestration", "Chaos Engineering", "Feature Flags",
+    ],
+  },
+  "Frontend & Mobile": {
+    color: "#a855f7",
+    tags: [
+      "React", "React Native", "Flutter", "Swift/iOS",
+      "Android/Kotlin", "WebAssembly", "Progressive Web Apps",
+      "Accessibility", "Design Systems", "Performance Optimization",
+    ],
+  },
+  "Databases & Storage": {
+    color: "#14b8a6",
+    tags: [
+      "PostgreSQL", "Redis", "Cassandra", "Graph Databases",
+      "Time-Series DBs", "Vector Databases", "Data Lakes",
+      "Object Storage", "NewSQL", "Database Sharding",
+    ],
+  },
+  "Networking & Protocols": {
+    color: "#6366f1",
+    tags: [
+      "HTTP/3", "gRPC", "WebSocket", "GraphQL",
+      "Software-Defined Networking", "Service Mesh", "Protocol Buffers",
+      "API Gateway", "CDN Architecture", "DNS Engineering",
     ],
   },
   "Security & Crypto": {
@@ -41,7 +66,14 @@ export const INTEREST_CATEGORIES: Record<string, InterestCategory> = {
     tags: [
       "Encryption", "Zero-Knowledge Proofs", "Homomorphic Encryption",
       "Blockchain", "Cybersecurity", "Post-Quantum Crypto",
-      "Secure Multi-Party Computation",
+      "Secure Multi-Party Computation", "Identity & Access Management",
+    ],
+  },
+  Quantum: {
+    color: "#ec4899",
+    tags: [
+      "Quantum Computing", "Quantum ML", "Quantum Cryptography",
+      "Quantum Simulation", "Quantum Error Correction", "NISQ Algorithms",
     ],
   },
   "IoT & Edge": {
@@ -63,13 +95,39 @@ export const INTEREST_CATEGORIES: Record<string, InterestCategory> = {
     tags: [
       "Data Engineering", "Data Science", "Signal Processing", "Time Series",
       "Anomaly Detection", "Real-time Analytics", "Data Pipelines",
+      "ETL/ELT", "Data Governance", "Business Intelligence",
     ],
   },
-  "Product & Strategy": {
+  "Hardware & Embedded": {
+    color: "#78716c",
+    tags: [
+      "FPGA", "ASIC Design", "RISC-V", "Firmware Development",
+      "PCB Design", "Hardware-Software Co-design", "Robotics",
+      "3D Printing", "Chip Architecture",
+    ],
+  },
+  "Compliance & Legal Tech": {
+    color: "#dc2626",
+    tags: [
+      "GDPR", "HIPAA", "SOC 2", "IP Law",
+      "Privacy Engineering", "Regulatory Compliance", "Data Residency",
+      "Audit Automation", "Risk Assessment",
+    ],
+  },
+  "Sustainability & Green Tech": {
+    color: "#16a34a",
+    tags: [
+      "Carbon Accounting", "Green Computing", "Circular Design",
+      "Energy-Efficient Algorithms", "Sustainable Infrastructure",
+      "ESG Reporting", "Carbon-Aware Computing",
+    ],
+  },
+  "Business & Strategy": {
     color: "#f97316",
     tags: [
       "Product Management", "UX Research", "Patent Strategy", "IP Landscape",
       "Market Analysis", "Prior Art Research", "Technical Writing",
+      "Go-to-Market", "Pricing Strategy", "Product-Led Growth",
     ],
   },
 };

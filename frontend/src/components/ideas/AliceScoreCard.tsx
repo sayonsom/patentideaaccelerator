@@ -19,7 +19,7 @@ function ScoreGauge({ value }: { value: number }) {
         <path
           d="M 10 55 A 50 50 0 0 1 110 55"
           fill="none"
-          stroke="#1F2933"
+          stroke="#E5E7EB"
           strokeWidth="8"
           strokeLinecap="round"
         />
@@ -33,7 +33,7 @@ function ScoreGauge({ value }: { value: number }) {
         />
       </svg>
       <div className="absolute inset-0 flex items-end justify-center pb-0">
-        <span className="text-2xl font-bold text-text-primary">{value}</span>
+        <span className="text-2xl font-semibold text-ink">{value}</span>
         <span className="text-xs text-text-muted ml-0.5 mb-1">/100</span>
       </div>
     </div>
@@ -43,7 +43,7 @@ function ScoreGauge({ value }: { value: number }) {
 export function AliceScoreCard({ score }: AliceScoreCardProps) {
   return (
     <Card>
-      <h3 className="text-sm font-semibold text-text-primary mb-4 text-center">
+      <h3 className="text-sm font-medium text-ink mb-4 text-center">
         Alice / Section 101 Score
       </h3>
 
@@ -57,23 +57,23 @@ export function AliceScoreCard({ score }: AliceScoreCardProps) {
 
       <div className="space-y-3">
         <Section title="Abstract Idea Risk">
-          <p className="text-xs text-text-secondary">{score.abstractIdeaAnalysis}</p>
+          <p className="text-xs text-neutral-dark">{score.abstractIdeaAnalysis}</p>
         </Section>
 
         <Section title="Practical Application">
-          <p className="text-xs text-text-secondary">{score.practicalApplication}</p>
+          <p className="text-xs text-neutral-dark">{score.practicalApplication}</p>
         </Section>
 
         <Section title="Inventive Concept">
-          <p className="text-xs text-text-secondary">{score.inventiveConcept}</p>
+          <p className="text-xs text-neutral-dark">{score.inventiveConcept}</p>
         </Section>
 
         {score.recommendations.length > 0 && (
           <Section title="Recommendations">
             <ul className="space-y-1">
               {score.recommendations.map((rec, i) => (
-                <li key={i} className="text-xs text-text-secondary flex items-start gap-1">
-                  <span className="text-accent-gold shrink-0">{"\u2022"}</span>
+                <li key={i} className="text-xs text-neutral-dark flex items-start gap-1">
+                  <span className="text-blue-ribbon shrink-0">{"\u2022"}</span>
                   {rec}
                 </li>
               ))}
@@ -85,7 +85,7 @@ export function AliceScoreCard({ score }: AliceScoreCardProps) {
           <Section title="Comparable Cases">
             <ul className="space-y-1">
               {score.comparableCases.map((c, i) => (
-                <li key={i} className="text-xs text-text-secondary italic">{c}</li>
+                <li key={i} className="text-xs text-neutral-dark italic">{c}</li>
               ))}
             </ul>
           </Section>
@@ -98,7 +98,7 @@ export function AliceScoreCard({ score }: AliceScoreCardProps) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h4 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-1">{title}</h4>
+      <h4 className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1">{title}</h4>
       {children}
     </div>
   );

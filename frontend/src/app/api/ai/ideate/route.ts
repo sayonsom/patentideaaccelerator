@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import Anthropic from "@anthropic-ai/sdk";
+import { generateAIResponse, resolveAIConfig, parseJSONFromResponse, resolvePromptPreferences } from "@/lib/ai-client";
+import { buildSystemPrompt } from "@/lib/prompt-preferences";
 
 const SYSTEM_PROMPT = `You are an AI patent ideation assistant for software engineering teams.
 Your job is to generate inventive concepts that are:
@@ -35,13 +36,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY || req.headers.get("x-api-key");
-  if (!apiKey) {
+  let config;
+  try {
+    config = resolveAIConfig(req);
+  } catch (err) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY not configured" },
+      { error: err instanceof Error ? err.message : "API key not configured" },
       { status: 500 }
     );
   }
+
+  const preferences = await resolvePromptPreferences(session.user.id);
 
   const body = await req.json();
   const { problemStatement, techStack, framework, existingApproach, numIdeas } = body;
@@ -53,8 +58,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const client = new Anthropic({ apiKey });
-
   const userPrompt = `Generate ${numIdeas || 3} inventive patent ideas for the following:
 
 **Problem:** ${problemStatement}
@@ -65,25 +68,10 @@ export async function POST(req: NextRequest) {
 Generate creative, technically specific ideas. Each must resolve a real engineering contradiction and be defensible under Alice/Section 101.`;
 
   try {
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userPrompt }],
-    });
+    const systemPrompt = buildSystemPrompt(SYSTEM_PROMPT, preferences);
+    const { text } = await generateAIResponse(config, systemPrompt, userPrompt, 4096);
 
-    const text = message.content[0].type === "text" ? message.content[0].text : "";
-
-    // Extract JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return NextResponse.json(
-        { error: "Failed to parse AI response" },
-        { status: 500 }
-      );
-    }
-
-    const parsed = JSON.parse(jsonMatch[0]);
+    const parsed = parseJSONFromResponse(text);
     return NextResponse.json(parsed);
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";

@@ -3,21 +3,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useTeamStore } from "@/lib/store";
-import { SPRINT_PHASES, SESSION_MODES } from "@/lib/constants";
-import { uid } from "@/lib/utils";
-import { Button, Card, Badge, EmptyState, Modal, Input } from "@/components/ui";
-import { DEFAULT_TEAM_TIME_BUDGET_SECONDS } from "@/lib/team-timer";
-import type { Team, Member } from "@/lib/types";
+import { useSprintStore, useVoltEdgeTeamStore } from "@/lib/store";
+import { SESSION_MODES } from "@/lib/constants";
+import { Button, Card, Badge, EmptyState, Modal, Input, Textarea, Select } from "@/components/ui";
+import type { Sprint, TeamMemberRecord } from "@/lib/types";
+import { listTeamMembers } from "@/lib/actions/teams-management";
 
 export default function SprintsPage() {
   const { data: session } = useSession();
-  const { teams, loadTeams, addTeam } = useTeamStore();
+  const { sprints, loading, loadSprints } = useSprintStore();
   const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => {
     if (session?.user?.id) {
-      loadTeams(session.user.id);
+      loadSprints(session.user.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
@@ -26,7 +25,7 @@ export default function SprintsPage() {
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-display font-bold text-text-primary">Invention Sprints</h1>
+        <h1 className="text-2xl font-serif text-ink">Invention Sprints</h1>
         <Button variant="accent" size="sm" onClick={() => setShowCreate(true)}>
           <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -36,12 +35,12 @@ export default function SprintsPage() {
       </div>
 
       {/* Process overview */}
-      <div className="bg-surface-deep rounded-lg border border-border-default p-4 mb-6">
-        <div className="text-xs font-bold text-accent-gold mb-2">THE PROCESS</div>
+      <div className="bg-white rounded-lg border border-border p-4 mb-6">
+        <div className="text-xs font-medium text-blue-ribbon mb-2">THE PROCESS</div>
         <div className="grid grid-cols-3 gap-3 text-center">
           {SESSION_MODES.map((m) => (
             <div key={m.key}>
-              <div className="text-sm font-bold" style={{ color: m.color }}>{m.label}</div>
+              <div className="text-sm font-medium" style={{ color: m.color }}>{m.label}</div>
               <div className="text-xs text-text-muted">{m.target}</div>
             </div>
           ))}
@@ -49,7 +48,9 @@ export default function SprintsPage() {
       </div>
 
       {/* Sprint list */}
-      {teams.length === 0 ? (
+      {loading ? (
+        <div className="text-center text-text-muted py-12">Loading sprints...</div>
+      ) : sprints.length === 0 ? (
         <EmptyState
           icon={
             <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
@@ -57,72 +58,66 @@ export default function SprintsPage() {
             </svg>
           }
           title="No sprints yet"
-          description="Run structured invention sprints with your team. 72-hour sessions to go from concepts to filings."
+          description="Run structured invention sprints to help your team generate and curate patent ideas. Sprints give you a time-boxed process to brainstorm, evaluate, and promote the best ideas."
           action={
             <Button variant="accent" onClick={() => setShowCreate(true)}>Create your first sprint</Button>
           }
         />
       ) : (
         <div className="grid gap-3">
-          {teams.map((team) => {
-            const phaseCounts = SPRINT_PHASES.map((p) => ({
-              ...p,
-              count: team.ideas.filter((i) => i.phase === p.key).length,
-            }));
-            return (
-              <Link key={team.id} href={`/sprints/${team.id}`}>
-                <Card className="hover:border-accent-gold/30 transition-colors cursor-pointer">
-                  <div className="flex justify-between items-center mb-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-accent-gold text-lg">{"\u25B3"}</span>
-                        <h3 className="text-base font-bold text-text-primary">{team.name}</h3>
-                      </div>
-                      <p className="text-xs text-text-muted mt-0.5">
-                        {team.members.map((m) => m.name).join(", ")}
-                        {" \u00B7 "}{team.ideas.length} concept{team.ideas.length !== 1 ? "s" : ""}
-                      </p>
+          {sprints.map((sprint) => (
+            <Link key={sprint.id} href={`/sprints/${sprint.id}`}>
+              <Card className="hover:border-blue-ribbon/30 transition-colors cursor-pointer">
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-ribbon text-lg">{"\u25B3"}</span>
+                      <h3 className="text-base font-medium text-ink">{sprint.name}</h3>
                     </div>
-                    <div className="bg-surface-deep rounded-lg px-3 py-2 text-center">
-                      <div className="text-xl font-bold font-mono text-text-primary">{team.ideas.length}</div>
-                      <div className="text-[10px] text-text-muted font-semibold">CONCEPTS</div>
-                    </div>
+                    {sprint.theme && (
+                      <p className="text-xs text-text-muted mt-0.5 ml-6">{sprint.theme}</p>
+                    )}
                   </div>
-
-                  {/* Phase bar */}
-                  {team.ideas.length > 0 && (
-                    <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden">
-                      {phaseCounts.filter((p) => p.count > 0).map((p) => (
-                        <div key={p.key} className="rounded-full" style={{ flex: p.count, backgroundColor: p.color + "60" }} />
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex gap-1.5 mt-2">
-                    <Badge variant="outline">
-                      {team.sessionMode}
-                    </Badge>
-                    <Badge variant="outline">
-                      {team.sprintPhase}
-                    </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{sprint.sessionMode}</Badge>
+                    <Badge variant="outline">{sprint.phase}</Badge>
+                    <SprintStatusBadge status={sprint.status} />
                   </div>
-                </Card>
-              </Link>
-            );
-          })}
+                </div>
+
+                {sprint.description && (
+                  <p className="text-xs text-text-muted mb-2 line-clamp-1">{sprint.description}</p>
+                )}
+              </Card>
+            </Link>
+          ))}
         </div>
       )}
 
       {/* Create sprint modal */}
-      <CreateSprintModal
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-        onCreate={(team) => {
-          addTeam(team);
-          setShowCreate(false);
-        }}
-      />
+      {showCreate && session?.user?.id && (
+        <CreateSprintModal
+          open={showCreate}
+          userId={session.user.id}
+          onClose={() => setShowCreate(false)}
+        />
+      )}
     </div>
+  );
+}
+
+// ─── Sprint Status Badge ──────────────────────────────────────────
+
+function SprintStatusBadge({ status }: { status: Sprint["status"] }) {
+  const colors: Record<Sprint["status"], string> = {
+    active: "bg-green-50 text-green-700 border-green-200",
+    paused: "bg-amber-50 text-amber-700 border-amber-200",
+    completed: "bg-gray-50 text-gray-500 border-gray-200",
+  };
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${colors[status]}`}>
+      {status}
+    </span>
   );
 }
 
@@ -130,92 +125,139 @@ export default function SprintsPage() {
 
 function CreateSprintModal({
   open,
+  userId,
   onClose,
-  onCreate,
 }: {
   open: boolean;
+  userId: string;
   onClose: () => void;
-  onCreate: (team: Team) => void;
 }) {
+  const { createSprint, addMember } = useSprintStore();
+  const { teams: voltEdgeTeams, loadMyTeams } = useVoltEdgeTeamStore();
+
   const [name, setName] = useState("");
-  const [memberName, setMemberName] = useState("");
-  const [members, setMembers] = useState<Member[]>([]);
+  const [theme, setTheme] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+  const [teamMembers, setTeamMembers] = useState<TeamMemberRecord[]>([]);
+  const [creating, setCreating] = useState(false);
 
-  const addMember = () => {
-    if (!memberName.trim()) return;
-    setMembers((prev) => [
-      ...prev,
-      { id: uid(), name: memberName.trim(), email: "", interests: [] },
-    ]);
-    setMemberName("");
-  };
+  // Load teams on mount
+  useEffect(() => {
+    loadMyTeams(userId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
-  const removeMember = (id: string) => {
-    setMembers((prev) => prev.filter((m) => m.id !== id));
-  };
+  // When a team is selected, load its members
+  useEffect(() => {
+    if (!selectedTeamId) {
+      setTeamMembers([]);
+      return;
+    }
+    let cancelled = false;
+    listTeamMembers(selectedTeamId).then((members) => {
+      if (!cancelled) setTeamMembers(members);
+    });
+    return () => { cancelled = true; };
+  }, [selectedTeamId]);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!name.trim()) return;
-    const team: Team = {
-      id: uid(),
-      name: name.trim(),
-      members,
-      dataMinister: null,
-      ideas: [],
-      sessionMode: "quantity",
-      sprintPhase: "foundation",
-      lastActivityAt: Date.now(),
-      timer: {
-        budgetSeconds: DEFAULT_TEAM_TIME_BUDGET_SECONDS,
-        spentSeconds: 0,
-        runningSinceMs: null,
-        startedAtMs: null,
-        startedStage: null,
-      },
-    };
-    onCreate(team);
-    setName("");
-    setMembers([]);
+    setCreating(true);
+    try {
+      const sprint = await createSprint({
+        name: name.trim(),
+        ownerId: userId,
+        teamId: selectedTeamId || undefined,
+        description: description.trim(),
+        theme: theme.trim(),
+      });
+
+      // Add team members as sprint members
+      for (const member of teamMembers) {
+        if (member.userId !== userId) {
+          await addMember(sprint.id, member.userId, "member");
+        }
+      }
+
+      setName("");
+      setTheme("");
+      setDescription("");
+      setSelectedTeamId("");
+      onClose();
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
     <Modal open={open} title="Create Invention Sprint" onClose={onClose}>
       <div className="space-y-4">
         <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Sprint Name</label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Q1 Patent Sprint" />
+          <label className="block text-xs font-medium text-neutral-dark mb-1">Sprint Name *</label>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g., Q1 Patent Sprint"
+          />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Team Members</label>
-          <div className="flex gap-2 mb-2">
-            <Input
-              value={memberName}
-              onChange={(e) => setMemberName(e.target.value)}
-              placeholder="Member name"
-              onKeyDown={(e) => e.key === "Enter" && addMember()}
-              className="flex-1"
-            />
-            <Button variant="secondary" size="sm" onClick={addMember} disabled={!memberName.trim()}>
-              Add
-            </Button>
-          </div>
-          {members.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {members.map((m) => (
-                <span key={m.id} className="inline-flex items-center gap-1 px-2 py-1 bg-surface-deep rounded text-xs text-text-secondary">
-                  {m.name}
-                  <button onClick={() => removeMember(m.id)} className="text-text-muted hover:text-red-400">&times;</button>
-                </span>
-              ))}
-            </div>
-          )}
+          <label className="block text-xs font-medium text-neutral-dark mb-1">Theme</label>
+          <Input
+            value={theme}
+            onChange={(e) => setTheme(e.target.value)}
+            placeholder="e.g., Cloud Security Patents"
+          />
+          <p className="text-[10px] text-text-muted mt-1">Focus area for this sprint</p>
         </div>
+
+        <div>
+          <label className="block text-xs font-medium text-neutral-dark mb-1">Description</label>
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What is this sprint about? What kinds of ideas are you looking for?"
+            rows={2}
+          />
+        </div>
+
+        {voltEdgeTeams.length > 0 && (
+          <div>
+            <label className="block text-xs font-medium text-neutral-dark mb-1">Team Scope</label>
+            <Select
+              value={selectedTeamId}
+              onChange={(val) => setSelectedTeamId(val)}
+              options={[
+                { value: "", label: "No team (personal sprint)" },
+                ...voltEdgeTeams.map((t) => ({ value: t.id, label: t.name })),
+              ]}
+            />
+            {teamMembers.length > 0 && (
+              <div className="mt-2">
+                <p className="text-[10px] text-text-muted mb-1">
+                  {teamMembers.length} team member{teamMembers.length !== 1 ? "s" : ""} will be added to this sprint
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {teamMembers.map((m) => (
+                    <span
+                      key={m.userId}
+                      className="inline-flex items-center px-2 py-0.5 bg-white rounded text-xs text-neutral-dark border border-border"
+                    >
+                      {m.user?.name || m.userId}
+                      {m.userId === userId && <span className="text-text-muted ml-1">(you)</span>}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="accent" onClick={handleCreate} disabled={!name.trim()}>
-            Create Sprint
+          <Button variant="accent" onClick={handleCreate} disabled={!name.trim() || creating}>
+            {creating ? "Creating..." : "Create Sprint"}
           </Button>
         </div>
       </div>

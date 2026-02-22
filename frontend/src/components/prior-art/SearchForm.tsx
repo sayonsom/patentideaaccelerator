@@ -50,7 +50,7 @@ export function SearchForm({ onSearch, loading }: SearchFormProps) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
+        <label className="block text-xs font-normal text-text-muted uppercase tracking-wider mb-2">
           CPC Class Filter (optional)
         </label>
         <div className="flex flex-wrap gap-2">
@@ -59,10 +59,10 @@ export function SearchForm({ onSearch, loading }: SearchFormProps) {
               key={cpc.value}
               type="button"
               onClick={() => toggleCpc(cpc.value)}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+              className={`px-2.5 py-1 rounded text-xs font-normal transition-colors ${
                 selectedCpc.includes(cpc.value)
-                  ? "bg-accent-gold/20 text-accent-gold"
-                  : "bg-surface-deep text-text-secondary hover:text-text-primary"
+                  ? "bg-accent-light text-blue-ribbon"
+                  : "bg-white text-neutral-dark hover:text-ink"
               }`}
             >
               {cpc.value}

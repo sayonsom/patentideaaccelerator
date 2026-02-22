@@ -13,14 +13,14 @@ export function PatentResultCard({ result }: PatentResultCardProps) {
     <Card hover>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-text-primary mb-1">
+          <h3 className="text-sm font-medium text-ink mb-1">
             {result.title || "Untitled Patent"}
           </h3>
           <p className="text-xs text-text-muted font-mono mb-2">
             {result.patentNumber}
           </p>
           {result.abstract && (
-            <p className="text-xs text-text-secondary mb-2">
+            <p className="text-xs text-neutral-dark mb-2">
               {truncate(result.abstract, 200)}
             </p>
           )}
@@ -41,7 +41,7 @@ export function PatentResultCard({ result }: PatentResultCardProps) {
             href={result.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="shrink-0 text-xs text-accent-gold hover:underline"
+            className="shrink-0 text-xs text-blue-ribbon hover:underline"
           >
             View
           </a>

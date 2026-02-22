@@ -1,14 +1,36 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useRef, useEffect, useCallback } from "react";
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   error?: string;
+  autoExpand?: boolean;
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, className = "", ...props }, ref) => {
+  ({ label, error, className = "", autoExpand = true, ...props }, ref) => {
+    const internalRef = useRef<HTMLTextAreaElement | null>(null);
+
+    const setRefs = useCallback(
+      (node: HTMLTextAreaElement | null) => {
+        internalRef.current = node;
+        if (typeof ref === "function") {
+          ref(node);
+        } else if (ref) {
+          (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
+        }
+      },
+      [ref]
+    );
+
+    useEffect(() => {
+      if (!autoExpand || !internalRef.current) return;
+      const el = internalRef.current;
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    }, [props.value, autoExpand]);
+
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
@@ -17,20 +39,20 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           </label>
         )}
         <textarea
-          ref={ref}
+          ref={setRefs}
           className={`
-            w-full px-3 py-2 text-sm text-text-primary
-            bg-surface-card border border-border rounded-lg
-            placeholder:text-text-faint
-            focus:border-accent-gold focus:ring-1 focus:ring-accent-gold focus:outline-none
-            transition-colors resize-y min-h-[80px]
-            ${error ? "border-accent-red" : ""}
+            w-full px-3 py-2 text-sm text-ink
+            bg-white border border-border rounded-md
+            placeholder:text-neutral-light
+            focus:border-blue-ribbon focus:ring-1 focus:ring-blue-ribbon focus:outline-none
+            transition-colors resize-none min-h-[80px]
+            ${error ? "border-danger" : ""}
             ${className}
           `}
           {...props}
         />
         {error && (
-          <span className="text-xs text-accent-red">{error}</span>
+          <span className="text-xs text-danger">{error}</span>
         )}
       </div>
     );

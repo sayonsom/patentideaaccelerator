@@ -10,6 +10,7 @@ function mapPrismaToGoal(row: PrismaGoal): BusinessGoal {
   return {
     id: row.id,
     userId: row.userId,
+    orgId: row.orgId,
     title: row.title,
     description: row.description,
     color: row.color,

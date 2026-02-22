@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import Anthropic from "@anthropic-ai/sdk";
+import { generateAIResponse, resolveAIConfig, resolvePromptPreferences } from "@/lib/ai-client";
+import { buildSystemPrompt } from "@/lib/prompt-preferences";
+
+const SYSTEM_PROMPT = `You are a patent language refinement assistant. When given a field from a patent idea, improve the text to be more specific, technically precise, and suitable for patent claims. Keep the same meaning but strengthen the language. Return only the refined text, no JSON wrapping.`;
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -9,13 +12,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY || req.headers.get("x-api-key");
-  if (!apiKey) {
+  let config;
+  try {
+    config = resolveAIConfig(req);
+  } catch (err) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY not configured" },
+      { error: err instanceof Error ? err.message : "API key not configured" },
       { status: 500 }
     );
   }
+
+  const preferences = await resolvePromptPreferences(session.user.id);
 
   const body = await req.json();
   const { field, value, context } = body;
@@ -27,8 +34,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const client = new Anthropic({ apiKey });
-
   const userPrompt = `Refine the following patent idea field.
 
 **Field:** ${field}
@@ -38,13 +43,9 @@ export async function POST(req: NextRequest) {
 Improve the text to be more specific, technically precise, and suitable for patent claims. Keep the same meaning but strengthen the language. Return only the refined text, no JSON.`;
 
   try {
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      messages: [{ role: "user", content: userPrompt }],
-    });
+    const systemPrompt = buildSystemPrompt(SYSTEM_PROMPT, preferences);
+    const { text } = await generateAIResponse(config, systemPrompt, userPrompt, 1024);
 
-    const text = message.content[0].type === "text" ? message.content[0].text : "";
     return NextResponse.json({ refined: text.trim() });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";

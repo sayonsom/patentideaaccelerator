@@ -2,30 +2,33 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useTeamStore } from "@/lib/store";
+import { useSprintStore } from "@/lib/store";
 import { SprintBoard } from "@/components/sprints/SprintBoard";
 import { Spinner } from "@/components/ui";
-import type { Team } from "@/lib/types";
 
 export default function SprintDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { data: session } = useSession();
-
-  const { teams, loading, loadTeams, updateTeam, getTeam } = useTeamStore();
+  const {
+    activeSprint,
+    sprintIdeas,
+    candidateIdeas,
+    members,
+    loading,
+    loadSprintDetail,
+    loadCandidates,
+  } = useSprintStore();
 
   useEffect(() => {
-    if (session?.user?.id) {
-      loadTeams(session.user.id);
+    if (id) {
+      loadSprintDetail(id);
+      loadCandidates(id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id]);
+  }, [id]);
 
-  const team = getTeam(id);
-
-  if (loading && teams.length === 0) {
+  if (loading && !activeSprint) {
     return (
       <div className="flex items-center justify-center py-20">
         <Spinner size="lg" />
@@ -33,14 +36,14 @@ export default function SprintDetailPage() {
     );
   }
 
-  if (!team) {
+  if (!activeSprint) {
     return (
       <div className="text-center py-20">
-        <h2 className="text-lg font-semibold text-text-primary mb-2">Sprint not found</h2>
+        <h2 className="text-lg font-medium text-ink mb-2">Sprint not found</h2>
         <p className="text-sm text-text-muted mb-4">This sprint may have been deleted.</p>
         <button
           onClick={() => router.push("/sprints")}
-          className="text-sm text-accent-gold hover:underline"
+          className="text-sm text-blue-ribbon hover:underline"
         >
           Back to sprints
         </button>
@@ -50,8 +53,10 @@ export default function SprintDetailPage() {
 
   return (
     <SprintBoard
-      team={team}
-      onUpdateTeam={(updated: Team) => updateTeam(id, updated)}
+      sprint={activeSprint}
+      ideas={sprintIdeas}
+      candidates={candidateIdeas}
+      members={members}
       onBack={() => router.push("/sprints")}
     />
   );

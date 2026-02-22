@@ -19,18 +19,18 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           className={`
-            w-full px-3 py-2 text-sm text-text-primary
-            bg-surface-card border border-border rounded-lg
-            placeholder:text-text-faint
-            focus:border-accent-gold focus:ring-1 focus:ring-accent-gold focus:outline-none
+            w-full px-3 py-2 text-sm text-ink
+            bg-white border border-border rounded-md
+            placeholder:text-neutral-light
+            focus:border-blue-ribbon focus:ring-1 focus:ring-blue-ribbon focus:outline-none
             transition-colors
-            ${error ? "border-accent-red" : ""}
+            ${error ? "border-danger" : ""}
             ${className}
           `}
           {...props}
         />
         {error && (
-          <span className="text-xs text-accent-red">{error}</span>
+          <span className="text-xs text-danger">{error}</span>
         )}
       </div>
     );

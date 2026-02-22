@@ -33,15 +33,15 @@ export function Tabs({ tabs, activeTab, onChange, children, className = "" }: Ta
               border-b-2 -mb-px
               ${
                 active === tab.id
-                  ? "text-accent-gold border-accent-gold"
-                  : "text-text-muted border-transparent hover:text-text-primary hover:border-border-hover"
+                  ? "text-blue-ribbon border-blue-ribbon"
+                  : "text-text-muted border-transparent hover:text-ink hover:border-neutral-light"
               }
             `}
             type="button"
           >
             {tab.label}
             {tab.badge && (
-              <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-surface-elevated text-text-muted">
+              <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-off-white text-text-muted">
                 {tab.badge}
               </span>
             )}

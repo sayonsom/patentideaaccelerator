@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useIdeas } from "@/hooks/useIdeas";
 import { IdeaCard } from "@/components/ideas/IdeaCard";
+import { TableView } from "@/components/ideas/TableView";
 import { Button, EmptyState, Badge } from "@/components/ui";
 import type { Idea, IdeaStatus } from "@/lib/types";
 import { SOLO_PIPELINE_STAGES, getIdeaProgress, getTotalScore, getAliceRiskColor } from "@/lib/utils";
@@ -16,7 +17,7 @@ const STATUS_FILTERS: { label: string; value: IdeaStatus | null }[] = [
   { label: "Filed", value: "filed" },
 ];
 
-type ViewMode = "grid" | "pipeline";
+type ViewMode = "grid" | "pipeline" | "table";
 
 /** Find the first incomplete stage for an idea */
 function getNextStageId(idea: Idea): string {
@@ -41,14 +42,14 @@ export default function IdeasPage() {
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-display font-bold text-text-primary">Ideas</h1>
+        <h1 className="text-2xl font-serif font-bold text-ink">Ideas</h1>
         <div className="flex items-center gap-2">
           {/* View toggle */}
-          <div className="flex bg-surface-deep rounded-lg p-0.5">
+          <div className="flex bg-white rounded-lg p-0.5">
             <button
               onClick={() => setViewMode("grid")}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                viewMode === "grid" ? "bg-surface-card text-text-primary shadow-sm" : "text-text-muted hover:text-text-primary"
+              className={`px-2.5 py-1 rounded text-xs font-normal transition-colors ${
+                viewMode === "grid" ? "bg-white text-ink shadow-sm" : "text-text-muted hover:text-ink"
               }`}
               title="Grid view"
             >
@@ -58,13 +59,24 @@ export default function IdeasPage() {
             </button>
             <button
               onClick={() => setViewMode("pipeline")}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                viewMode === "pipeline" ? "bg-surface-card text-text-primary shadow-sm" : "text-text-muted hover:text-text-primary"
+              className={`px-2.5 py-1 rounded text-xs font-normal transition-colors ${
+                viewMode === "pipeline" ? "bg-white text-ink shadow-sm" : "text-text-muted hover:text-ink"
               }`}
               title="Pipeline view"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`px-2.5 py-1 rounded text-xs font-normal transition-colors ${
+                viewMode === "table" ? "bg-white text-ink shadow-sm" : "text-text-muted hover:text-ink"
+              }`}
+              title="Table view (with Magic Columns)"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125M10.875 12H3.375m7.5 0h7.5m-7.5 0c.621 0 1.125.504 1.125 1.125M20.625 12c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5M12 14.625v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 14.625c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m0 0v1.5c0 .621-.504 1.125-1.125 1.125" />
               </svg>
             </button>
           </div>
@@ -88,10 +100,10 @@ export default function IdeasPage() {
             <button
               key={f.label}
               onClick={() => setFilterStatus(f.value)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              className={`px-3 py-1 rounded-full text-xs font-normal transition-colors ${
                 filterStatus === f.value
-                  ? "bg-accent-gold/20 text-accent-gold"
-                  : "bg-surface-deep text-text-secondary hover:text-text-primary"
+                  ? "bg-accent-light text-blue-ribbon"
+                  : "bg-white text-neutral-dark hover:text-ink"
               }`}
             >
               {f.label}
@@ -115,7 +127,7 @@ export default function IdeasPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search ideas..."
-            className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-surface-deep border border-border-default text-text-primary text-xs focus:outline-none focus:ring-2 focus:ring-accent-gold/40"
+            className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white border border-border text-ink text-xs focus:outline-none focus:ring-2 focus:ring-blue-ribbon/40"
           />
         </div>
 
@@ -152,6 +164,8 @@ export default function IdeasPage() {
             <IdeaCard key={idea.id} idea={idea} />
           ))}
         </div>
+      ) : viewMode === "table" ? (
+        <TableView ideas={ideas} />
       ) : (
         <PipelineView ideas={ideas} />
       )}
@@ -183,7 +197,7 @@ function PipelineView({ ideas }: { ideas: Idea[] }) {
         {columns.map((col) => (
           <div key={col.id} className="min-w-[220px] w-[220px] shrink-0">
             <div className="flex items-center gap-2 mb-3 px-1">
-              <h3 className="text-xs font-semibold text-text-primary truncate">{col.label}</h3>
+              <h3 className="text-xs font-medium text-ink truncate">{col.label}</h3>
               <Badge variant="outline" size="sm">{col.ideas.length}</Badge>
             </div>
             <div className="space-y-2">
@@ -191,7 +205,7 @@ function PipelineView({ ideas }: { ideas: Idea[] }) {
                 <PipelineCard key={idea.id} idea={idea} />
               ))}
               {col.ideas.length === 0 && (
-                <div className="py-6 text-center text-[10px] text-text-muted border border-dashed border-border-default rounded-lg">
+                <div className="py-6 text-center text-[10px] text-text-muted border border-dashed border-border rounded-lg">
                   No ideas
                 </div>
               )}
@@ -205,7 +219,7 @@ function PipelineView({ ideas }: { ideas: Idea[] }) {
         {columns.filter((c) => c.ideas.length > 0).map((col) => (
           <div key={col.id}>
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-xs font-semibold text-text-primary">{col.label}</h3>
+              <h3 className="text-xs font-medium text-ink">{col.label}</h3>
               <Badge variant="outline" size="sm">{col.ideas.length}</Badge>
             </div>
             <div className="space-y-2">
@@ -226,8 +240,8 @@ function PipelineCard({ idea }: { idea: Idea }) {
 
   return (
     <Link href={`/ideas/${idea.id}`} className="block group">
-      <div className="rounded-lg border border-border-default bg-surface-card p-3 hover:border-accent-gold/40 transition-colors">
-        <h4 className="text-xs font-semibold text-text-primary mb-1 line-clamp-2 group-hover:text-accent-gold transition-colors">
+      <div className="rounded-lg border border-border bg-white p-3 hover:border-blue-ribbon/40 transition-colors">
+        <h4 className="text-xs font-normal text-ink mb-1 line-clamp-2 group-hover:text-blue-ribbon transition-colors">
           {idea.title || "Untitled"}
         </h4>
 
@@ -237,7 +251,7 @@ function PipelineCard({ idea }: { idea: Idea }) {
           )}
           {idea.aliceScore && (
             <span
-              className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+              className="text-[10px] font-normal px-1.5 py-0.5 rounded-full"
               style={{
                 backgroundColor: `${getAliceRiskColor(idea.aliceScore.abstractIdeaRisk)}20`,
                 color: getAliceRiskColor(idea.aliceScore.abstractIdeaRisk),
@@ -250,7 +264,7 @@ function PipelineCard({ idea }: { idea: Idea }) {
 
         {/* Mini progress */}
         <div className="flex items-center gap-1.5">
-          <div className="flex-1 h-1 bg-surface-deep rounded-full overflow-hidden">
+          <div className="flex-1 h-1 bg-white rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all"
               style={{

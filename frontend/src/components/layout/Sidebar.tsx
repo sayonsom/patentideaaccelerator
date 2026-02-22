@@ -11,13 +11,31 @@ interface NavItem {
   icon: React.ReactNode;
 }
 
-const NAV_ITEMS: NavItem[] = [
+const MAIN_NAV: NavItem[] = [
   {
     href: "/ideas",
     label: "Ideas",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+      </svg>
+    ),
+  },
+  {
+    href: "/portfolio",
+    label: "Portfolio",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/teams",
+    label: "Teams",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
       </svg>
     ),
   },
@@ -40,6 +58,15 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    href: "/landscaping",
+    label: "Landscaping",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
+      </svg>
+    ),
+  },
+  {
     href: "/alignment",
     label: "Alignment",
     icon: (
@@ -57,6 +84,39 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+];
+
+const ADMIN_NAV: NavItem[] = [
+  {
+    href: "/admin",
+    label: "Overview",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/admin/members",
+    label: "Members",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/admin/goals",
+    label: "Goals",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+      </svg>
+    ),
+  },
+];
+
+const BOTTOM_NAV: NavItem[] = [
   {
     href: "/settings",
     label: "Settings",
@@ -69,30 +129,57 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+function NavLink({
+  item,
+  active,
+  collapsed,
+}: {
+  item: NavItem;
+  active: boolean;
+  collapsed: boolean;
+}) {
+  return (
+    <Link
+      href={item.href}
+      className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-normal transition-colors ${
+        active
+          ? "bg-accent-light text-blue-ribbon"
+          : "text-text-secondary hover:text-ink hover:bg-neutral-off-white"
+      }`}
+      title={collapsed ? item.label : undefined}
+    >
+      <span className="shrink-0">{item.icon}</span>
+      {!collapsed && <span>{item.label}</span>}
+    </Link>
+  );
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { data: session } = useSession();
 
+  const isAdmin = session?.user?.orgRole === "business_admin";
+
   return (
     <aside
-      className={`flex flex-col h-screen bg-surface-panel border-r border-border-default transition-all duration-200 ${
+      className={`flex flex-col h-screen bg-white border-r border-border transition-all duration-200 ${
         collapsed ? "w-16" : "w-56"
       }`}
     >
       {/* Logo */}
-      <div className="flex items-center h-14 px-4 border-b border-border-default">
+      <div className="flex items-center h-14 px-4 border-b border-border">
         <Link href="/" className="flex items-center gap-2 overflow-hidden">
-          <span className="text-accent-gold font-bold text-xl shrink-0">{"\u26A1"}</span>
+          <span className="text-blue-ribbon font-normal text-xl shrink-0">{"\u26A1"}</span>
           {!collapsed && (
-            <span className="font-display font-bold text-text-primary text-lg tracking-tight whitespace-nowrap">
+            <span className="font-serif font-bold text-ink text-lg tracking-tight whitespace-nowrap">
               VoltEdge
             </span>
           )}
         </Link>
         <button
           onClick={() => setCollapsed((c) => !c)}
-          className="ml-auto text-text-muted hover:text-text-primary transition-colors shrink-0"
+          className="ml-auto text-neutral-light hover:text-ink transition-colors shrink-0"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -105,42 +192,71 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Nav links */}
+      {/* Main nav links */}
       <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
-          const active = pathname.startsWith(item.href);
-          return (
-            <Link
+        {MAIN_NAV.map((item) => (
+          <NavLink
+            key={item.href}
+            item={item}
+            active={pathname.startsWith(item.href)}
+            collapsed={collapsed}
+          />
+        ))}
+
+        {/* Admin section — only for business_admin */}
+        {isAdmin && (
+          <>
+            <div className="pt-4 pb-1 px-3">
+              {!collapsed && (
+                <p className="text-[10px] font-normal text-neutral-light uppercase tracking-wider">
+                  Admin
+                </p>
+              )}
+              {collapsed && (
+                <div className="w-full h-px bg-border" />
+              )}
+            </div>
+            {ADMIN_NAV.map((item) => (
+              <NavLink
+                key={item.href}
+                item={item}
+                active={
+                  item.href === "/admin"
+                    ? pathname === "/admin"
+                    : pathname.startsWith(item.href)
+                }
+                collapsed={collapsed}
+              />
+            ))}
+          </>
+        )}
+
+        {/* Settings at the bottom of nav */}
+        <div className="pt-4">
+          {BOTTOM_NAV.map((item) => (
+            <NavLink
               key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                active
-                  ? "bg-accent-gold/10 text-accent-gold"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface-deep"
-              }`}
-              title={collapsed ? item.label : undefined}
-            >
-              <span className="shrink-0">{item.icon}</span>
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
+              item={item}
+              active={pathname.startsWith(item.href)}
+              collapsed={collapsed}
+            />
+          ))}
+        </div>
       </nav>
 
       {/* User + Sign out */}
-      <div className="px-3 py-3 border-t border-border-default">
+      <div className="px-3 py-3 border-t border-border">
         {session?.user ? (
           <div className={`flex items-center ${collapsed ? "justify-center" : "gap-2"}`}>
-            {/* Avatar circle */}
-            <div className="w-7 h-7 rounded-full bg-accent-gold/20 text-accent-gold flex items-center justify-center text-xs font-bold shrink-0">
+            <div className="w-7 h-7 rounded-full bg-accent-light text-blue-ribbon flex items-center justify-center text-xs font-normal shrink-0">
               {(session.user.name?.[0] ?? session.user.email?.[0] ?? "U").toUpperCase()}
             </div>
             {!collapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-text-primary truncate">
+                <p className="text-xs font-normal text-ink truncate">
                   {session.user.name ?? "User"}
                 </p>
-                <p className="text-[10px] text-text-muted truncate">
+                <p className="text-[10px] text-neutral-light truncate">
                   {session.user.email}
                 </p>
               </div>
@@ -148,7 +264,7 @@ export function Sidebar() {
             {!collapsed && (
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className="text-text-muted hover:text-red-400 transition-colors shrink-0"
+                className="text-neutral-light hover:text-danger transition-colors shrink-0"
                 title="Sign out"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -158,7 +274,7 @@ export function Sidebar() {
             )}
           </div>
         ) : (
-          !collapsed && <p className="text-xs text-text-muted">VoltEdge v0.1</p>
+          !collapsed && <p className="text-xs text-neutral-light">VoltEdge v0.1</p>
         )}
       </div>
     </aside>

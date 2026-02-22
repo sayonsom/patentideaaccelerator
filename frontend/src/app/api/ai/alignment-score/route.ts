@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import Anthropic from "@anthropic-ai/sdk";
+import { generateAIResponse, resolveAIConfig, parseJSONFromResponse, resolvePromptPreferences } from "@/lib/ai-client";
+import { buildSystemPrompt } from "@/lib/prompt-preferences";
 
 const SYSTEM_PROMPT = `You are a strategic patent portfolio advisor. Given a patent idea and a list of business goals, score how well the idea aligns with each goal on a 0-10 scale.
 
@@ -31,13 +32,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY || req.headers.get("x-api-key");
-  if (!apiKey) {
+  let config;
+  try {
+    config = resolveAIConfig(req);
+  } catch (err) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY not configured" },
+      { error: err instanceof Error ? err.message : "API key not configured" },
       { status: 500 }
     );
   }
+
+  const preferences = await resolvePromptPreferences(session.user.id);
 
   const body = await req.json();
   const { title, problemStatement, proposedSolution, technicalApproach, goals } = body;
@@ -55,8 +60,6 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
-
-  const client = new Anthropic({ apiKey });
 
   const goalsSection = goals
     .map((g: { id: string; title: string; description: string }) =>
@@ -77,23 +80,10 @@ ${goalsSection}
 Provide a score (0-10) and brief rationale for each goal.`;
 
   try {
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2048,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userPrompt }],
-    });
+    const systemPrompt = buildSystemPrompt(SYSTEM_PROMPT, preferences);
+    const { text } = await generateAIResponse(config, systemPrompt, userPrompt, 2048);
 
-    const text = message.content[0].type === "text" ? message.content[0].text : "";
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return NextResponse.json(
-        { error: "Failed to parse AI response" },
-        { status: 500 }
-      );
-    }
-
-    const parsed = JSON.parse(jsonMatch[0]);
+    const parsed = parseJSONFromResponse(text);
     return NextResponse.json(parsed);
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";

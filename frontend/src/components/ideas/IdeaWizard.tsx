@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import type { Idea, FrameworkType, IdeaScore, GeneratedIdea, AliceScore } from "@/lib/types";
 import { useIdeaStore } from "@/lib/store";
 import { useAI } from "@/hooks/useAI";
+import { useWizardDraft } from "@/hooks/useWizardDraft";
 import { createBlankIdea } from "@/lib/utils";
-import { Button, Stepper, Input, Textarea, TagInput, Card, Spinner } from "@/components/ui";
+import { Button, Stepper, Input, Textarea, TagInput, Card, Modal, Spinner } from "@/components/ui";
 import { ScoreMatrix } from "./ScoreMatrix";
 import { AliceScoreCard } from "./AliceScoreCard";
 
@@ -38,15 +39,49 @@ const TECH_SUGGESTIONS = [
 
 export function IdeaWizard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const addIdea = useIdeaStore((s) => s.addIdea);
 
   const userId = session?.user?.id ?? "anonymous";
+  const sprintId = searchParams.get("sprintId");
+  const { hasDraft, draftData, saveDraft, clearDraft, dismissDraft } = useWizardDraft(userId);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Partial<Idea>>(() => {
     const blank = createBlankIdea(userId);
     return blank;
   });
+
+  // ─── Show restore modal if draft exists ─────────────────────
+  useEffect(() => {
+    if (hasDraft && draftData) {
+      setShowRestoreModal(true);
+    }
+  }, [hasDraft, draftData]);
+
+  // ─── Auto-save on step/draft changes ────────────────────────
+  useEffect(() => {
+    // Only auto-save if user has started filling in content
+    if (draft.problemStatement || draft.title || draft.proposedSolution) {
+      saveDraft(step, draft);
+    }
+  }, [step, draft, saveDraft]);
+
+  function handleRestore() {
+    if (draftData) {
+      setStep(draftData.step);
+      setDraft((prev) => ({ ...prev, ...draftData.draft }));
+    }
+    setShowRestoreModal(false);
+    dismissDraft();
+  }
+
+  function handleDiscard() {
+    clearDraft();
+    setShowRestoreModal(false);
+  }
 
   const update = useCallback((updates: Partial<Idea>) => {
     setDraft((prev) => ({ ...prev, ...updates }));
@@ -61,12 +96,74 @@ export function IdeaWizard() {
   }
 
   async function save() {
-    const idea = await addIdea(draft, userId);
-    router.push(`/ideas/${idea.id}`);
+    const ideaData = sprintId ? { ...draft, sprintId } : draft;
+    const idea = await addIdea(ideaData, userId);
+    clearDraft();
+    if (sprintId) {
+      router.push(`/sprints/${sprintId}`);
+    } else {
+      router.push(`/ideas/${idea.id}`);
+    }
+  }
+
+  function formatTimeAgo(isoDate: string): string {
+    const diff = Date.now() - new Date(isoDate).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins} minute${mins > 1 ? "s" : ""} ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs} hour${hrs > 1 ? "s" : ""} ago`;
+    return "over a day ago";
   }
 
   return (
     <div className="max-w-3xl mx-auto">
+      {/* Draft restore modal */}
+      <Modal
+        open={showRestoreModal}
+        onClose={handleDiscard}
+        title="Restore Draft?"
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-dark">
+            You have an unsaved draft from{" "}
+            <span className="font-normal text-ink">
+              {draftData?.savedAt ? formatTimeAgo(draftData.savedAt) : "recently"}
+            </span>.
+            Would you like to continue where you left off?
+          </p>
+          {draftData?.draft?.title && (
+            <div className="p-3 rounded-lg bg-neutral-off-white border border-border">
+              <p className="text-xs text-neutral-light mb-0.5">Draft title</p>
+              <p className="text-sm font-medium text-ink">{draftData.draft.title}</p>
+            </div>
+          )}
+          <div className="flex gap-3 justify-end">
+            <Button variant="ghost" onClick={handleDiscard}>
+              Discard
+            </Button>
+            <Button variant="primary" onClick={handleRestore}>
+              Restore Draft
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Sprint context banner */}
+      {sprintId && (
+        <div className="mb-4 px-4 py-2.5 rounded-lg bg-blue-ribbon/5 border border-blue-ribbon/20 flex items-center gap-2">
+          <span className="text-blue-ribbon text-sm">&#9651;</span>
+          <span className="text-xs text-blue-ribbon/80">Creating idea for sprint</span>
+          <button
+            onClick={() => router.push(`/sprints/${sprintId}`)}
+            className="ml-auto text-xs text-text-muted hover:text-blue-ribbon"
+          >
+            Back to sprint
+          </button>
+        </div>
+      )}
+
       {/* Stepper */}
       <div className="mb-8">
         <Stepper steps={WIZARD_STEPS} currentStep={step} onStepClick={setStep} />
@@ -95,7 +192,7 @@ export function IdeaWizard() {
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between mt-8 pt-6 border-t border-border-default">
+      <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
         <Button variant="ghost" onClick={back} disabled={step === 0}>
           Back
         </Button>
@@ -121,8 +218,8 @@ function StepProblem({ draft, update }: { draft: Partial<Idea>; update: (u: Part
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-display font-bold text-text-primary mb-1">Describe the Problem</h2>
-        <p className="text-sm text-text-secondary">What problem did you solve? What was broken, slow, or inefficient?</p>
+        <h2 className="text-lg font-serif font-bold text-ink mb-1">Describe the Problem</h2>
+        <p className="text-sm text-neutral-dark">What problem did you solve? What was broken, slow, or inefficient?</p>
       </div>
 
       <Textarea
@@ -142,7 +239,7 @@ function StepProblem({ draft, update }: { draft: Partial<Idea>; update: (u: Part
       />
 
       <div>
-        <label className="block text-sm font-medium text-text-secondary mb-1.5">Tech Stack</label>
+        <label className="block text-sm font-normal text-neutral-dark mb-1.5">Tech Stack</label>
         <TagInput
           tags={draft.techStack ?? []}
           onChange={(tags) => update({ techStack: tags })}
@@ -160,8 +257,8 @@ function StepFramework({ draft, update }: { draft: Partial<Idea>; update: (u: Pa
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-display font-bold text-text-primary mb-1">Choose a Framework</h2>
-        <p className="text-sm text-text-secondary">Pick an inventive framework to guide your thinking, or go freeform.</p>
+        <h2 className="text-lg font-serif font-bold text-ink mb-1">Choose a Framework</h2>
+        <p className="text-sm text-neutral-dark">Pick an inventive framework to guide your thinking, or go freeform.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -169,14 +266,14 @@ function StepFramework({ draft, update }: { draft: Partial<Idea>; update: (u: Pa
           <Card
             key={fw.value}
             hover
-            borderColor={draft.frameworkUsed === fw.value ? "#C69214" : undefined}
+            borderColor={draft.frameworkUsed === fw.value ? "#003BDE" : undefined}
             onClick={() => update({ frameworkUsed: fw.value })}
           >
             <div className="flex items-start gap-3">
               <span className="text-2xl">{fw.icon}</span>
               <div>
-                <div className="text-sm font-semibold text-text-primary">{fw.label}</div>
-                <div className="text-xs text-text-secondary mt-0.5">{fw.desc}</div>
+                <div className="text-sm font-medium text-ink">{fw.label}</div>
+                <div className="text-xs text-neutral-dark mt-0.5">{fw.desc}</div>
               </div>
             </div>
           </Card>
@@ -217,8 +314,8 @@ function StepAIIdeation({ draft, update }: { draft: Partial<Idea>; update: (u: P
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-display font-bold text-text-primary mb-1">AI Ideation</h2>
-        <p className="text-sm text-text-secondary">
+        <h2 className="text-lg font-serif font-bold text-ink mb-1">AI Ideation</h2>
+        <p className="text-sm text-neutral-dark">
           Claude will analyze your problem and generate inventive patent concepts.
         </p>
       </div>
@@ -233,14 +330,14 @@ function StepAIIdeation({ draft, update }: { draft: Partial<Idea>; update: (u: P
 
       {generatedIdeas.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-text-primary">Generated Concepts ({generatedIdeas.length})</h3>
+          <h3 className="text-sm font-medium text-ink">Generated Concepts ({generatedIdeas.length})</h3>
           {generatedIdeas.map((idea, i) => (
-            <Card key={i} hover onClick={() => selectIdea(idea)} borderColor={draft.title === idea.title ? "#C69214" : undefined}>
-              <h4 className="text-sm font-semibold text-text-primary mb-1">{idea.title}</h4>
-              <p className="text-xs text-text-secondary mb-2">{idea.proposedSolution}</p>
+            <Card key={i} hover onClick={() => selectIdea(idea)} borderColor={draft.title === idea.title ? "#003BDE" : undefined}>
+              <h4 className="text-sm font-medium text-ink mb-1">{idea.title}</h4>
+              <p className="text-xs text-neutral-dark mb-2">{idea.proposedSolution}</p>
               <div className="flex gap-2 flex-wrap">
                 {idea.estimatedCpcClass && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-deep text-text-muted">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white text-text-muted">
                     CPC: {idea.estimatedCpcClass}
                   </span>
                 )}
@@ -254,7 +351,7 @@ function StepAIIdeation({ draft, update }: { draft: Partial<Idea>; update: (u: P
                   </span>
                 )}
                 {idea.inventivePrincipleUsed && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-deep text-text-muted">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white text-text-muted">
                     {idea.inventivePrincipleUsed}
                   </span>
                 )}
@@ -280,8 +377,8 @@ function StepRefine({ draft, update }: { draft: Partial<Idea>; update: (u: Parti
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-display font-bold text-text-primary mb-1">Refine Your Idea</h2>
-        <p className="text-sm text-text-secondary">Add the details that make this a defensible invention.</p>
+        <h2 className="text-lg font-serif font-bold text-ink mb-1">Refine Your Idea</h2>
+        <p className="text-sm text-neutral-dark">Add the details that make this a defensible invention.</p>
       </div>
 
       <Input
@@ -316,7 +413,7 @@ function StepRefine({ draft, update }: { draft: Partial<Idea>; update: (u: Parti
       />
 
       <div>
-        <label className="block text-sm font-medium text-text-secondary mb-1.5">Tags</label>
+        <label className="block text-sm font-normal text-neutral-dark mb-1.5">Tags</label>
         <TagInput
           tags={draft.tags ?? []}
           onChange={(tags) => update({ tags })}
@@ -347,8 +444,8 @@ function StepAliceCheck({ draft, update }: { draft: Partial<Idea>; update: (u: P
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-display font-bold text-text-primary mb-1">Alice / Section 101 Pre-Screen</h2>
-        <p className="text-sm text-text-secondary">
+        <h2 className="text-lg font-serif font-bold text-ink mb-1">Alice / Section 101 Pre-Screen</h2>
+        <p className="text-sm text-neutral-dark">
           AI evaluates your idea against the Alice framework to estimate patent eligibility.
         </p>
       </div>
@@ -378,32 +475,32 @@ function StepReview({ draft, update }: { draft: Partial<Idea>; update: (u: Parti
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-display font-bold text-text-primary mb-1">Review & Score</h2>
-        <p className="text-sm text-text-secondary">Review your idea and optionally score it on the patent readiness matrix.</p>
+        <h2 className="text-lg font-serif font-bold text-ink mb-1">Review & Score</h2>
+        <p className="text-sm text-neutral-dark">Review your idea and optionally score it on the patent readiness matrix.</p>
       </div>
 
       {/* Summary */}
       <Card>
-        <h3 className="text-base font-semibold text-text-primary mb-2">
+        <h3 className="text-base font-medium text-ink mb-2">
           {draft.title || "Untitled Idea"}
         </h3>
         {draft.problemStatement && (
-          <p className="text-sm text-text-secondary mb-2">{draft.problemStatement}</p>
+          <p className="text-sm text-neutral-dark mb-2">{draft.problemStatement}</p>
         )}
         {draft.proposedSolution && (
-          <div className="text-sm text-text-secondary">
-            <span className="font-medium text-text-primary">Solution: </span>
+          <div className="text-sm text-neutral-dark">
+            <span className="font-normal text-ink">Solution: </span>
             {draft.proposedSolution}
           </div>
         )}
         <div className="flex gap-2 mt-3 flex-wrap">
           {draft.frameworkUsed && draft.frameworkUsed !== "none" && (
-            <span className="text-xs px-2 py-0.5 rounded bg-surface-deep text-text-muted">
+            <span className="text-xs px-2 py-0.5 rounded bg-white text-text-muted">
               {draft.frameworkUsed.toUpperCase()}
             </span>
           )}
           {(draft.tags ?? []).map((t) => (
-            <span key={t} className="text-xs px-2 py-0.5 rounded bg-surface-deep text-text-muted">{t}</span>
+            <span key={t} className="text-xs px-2 py-0.5 rounded bg-white text-text-muted">{t}</span>
           ))}
         </div>
       </Card>

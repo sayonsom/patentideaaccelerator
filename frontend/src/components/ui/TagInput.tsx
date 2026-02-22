@@ -52,11 +52,11 @@ export function TagInput({
         </label>
       )}
       <div className="relative">
-        <div className="flex flex-wrap gap-1.5 p-2 bg-surface-card border border-border rounded-lg min-h-[42px]">
+        <div className="flex flex-wrap gap-1.5 p-2 bg-white border border-border rounded-md min-h-[42px]">
           {tags.map((tag) => (
             <Badge
               key={tag}
-              color="#3b82f6"
+              color="#2251FF"
               removable
               onRemove={() => removeTag(tag)}
             >
@@ -86,17 +86,17 @@ export function TagInput({
             onFocus={() => setShowSuggestions(true)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
             placeholder={tags.length === 0 ? placeholder : ""}
-            className="flex-1 min-w-[120px] bg-transparent text-sm text-text-primary placeholder:text-text-faint outline-none border-none focus:ring-0"
+            className="flex-1 min-w-[120px] bg-transparent text-sm text-ink placeholder:text-neutral-light outline-none border-none focus:ring-0"
           />
         </div>
         {showSuggestions && filtered.length > 0 && input && (
-          <div className="absolute z-10 mt-1 w-full bg-surface-card border border-border rounded-lg shadow-xl max-h-48 overflow-y-auto">
+          <div className="absolute z-10 mt-1 w-full bg-white border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
             {filtered.slice(0, 8).map((s) => (
               <button
                 key={s}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => addTag(s)}
-                className="w-full text-left px-3 py-2 text-sm text-text-secondary hover:bg-surface-elevated hover:text-text-primary transition-colors"
+                className="w-full text-left px-3 py-2 text-sm text-text-secondary hover:bg-neutral-off-white hover:text-ink transition-colors"
                 type="button"
               >
                 {s}
