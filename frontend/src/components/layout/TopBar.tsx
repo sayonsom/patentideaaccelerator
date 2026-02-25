@@ -65,12 +65,10 @@ export function TopBar() {
         {(() => {
           const base = "/" + segments[0];
           // Only show CTA on pages where it makes contextual sense
-          if (base === "/settings" || base === "/admin" || base === "/alignment") return null;
+          // Don't show CTA on non-actionable pages or pages that have their own inline CTA
+          if (["/settings", "/admin", "/alignment", "/sprints", "/portfolio", "/landscaping", "/prior-art"].includes(base)) return null;
           const cta = {
-            "/sprints": { href: "/sprints", label: "New Sprint" },
             "/teams": { href: "/teams/new", label: "Create Team" },
-            "/portfolio": { href: "/portfolio", label: "New Portfolio" },
-            "/landscaping": { href: "/landscaping", label: "New Session" },
           }[base] ?? { href: "/ideas/new", label: "New Idea" };
           return (
             <Link

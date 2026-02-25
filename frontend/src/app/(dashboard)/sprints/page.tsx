@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useSprintStore, useVoltEdgeTeamStore } from "@/lib/store";
+import { useSprintStore, useIPRampTeamStore } from "@/lib/store";
 import { SESSION_MODES } from "@/lib/constants";
 import { Button, Card, EmptyState, Modal, Input, Textarea, Select } from "@/components/ui";
 import type { Sprint, TeamMemberRecord } from "@/lib/types";
@@ -163,7 +163,7 @@ function CreateSprintModal({
   onClose: () => void;
 }) {
   const { createSprint, addMember } = useSprintStore();
-  const { teams: voltEdgeTeams, loadMyTeams } = useVoltEdgeTeamStore();
+  const { teams: ipRampTeams, loadMyTeams } = useIPRampTeamStore();
 
   const [name, setName] = useState("");
   const [theme, setTheme] = useState("");
@@ -252,7 +252,7 @@ function CreateSprintModal({
           />
         </div>
 
-        {voltEdgeTeams.length > 0 && (
+        {ipRampTeams.length > 0 && (
           <div>
             <label className="block text-xs font-medium text-neutral-dark mb-1">Team Scope</label>
             <Select
@@ -260,7 +260,7 @@ function CreateSprintModal({
               onChange={(val) => setSelectedTeamId(val)}
               options={[
                 { value: "", label: "No team (personal sprint)" },
-                ...voltEdgeTeams.map((t) => ({ value: t.id, label: t.name })),
+                ...ipRampTeams.map((t) => ({ value: t.id, label: t.name })),
               ]}
             />
             {teamMembers.length > 0 && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { Idea, IdeaStatus, Sprint, SprintMemberRecord, Team, User, BusinessGoal, Organization, OrgMember, OrgRole, VoltEdgeTeam, AIProvider, PromptPreferences, ChatHistory, ChatContextType, Portfolio, PortfolioIdeaStatus } from "./types";
+import type { Idea, IdeaStatus, Sprint, SprintMemberRecord, Team, User, BusinessGoal, Organization, OrgMember, OrgRole, IPRampTeam, AIProvider, PromptPreferences, ChatHistory, ChatContextType, Portfolio, PortfolioIdeaStatus } from "./types";
 import { DEFAULT_PROMPT_PREFERENCES } from "./types";
 import * as api from "./api";
 import { createBlankIdea } from "./utils";
@@ -13,7 +13,7 @@ import {
   createOrgInvite as createOrgInviteAction,
 } from "./actions/organizations";
 import {
-  listTeamsForUser as listVoltEdgeTeams,
+  listTeamsForUser as listIPRampTeams,
   listTeamsForOrg,
 } from "./actions/teams-management";
 
@@ -356,7 +356,7 @@ export const useSprintStore = create<SprintState>((set) => ({
 interface OrgState {
   org: Organization | null;
   members: OrgMember[];
-  voltEdgeTeams: VoltEdgeTeam[];
+  ipRampTeams: IPRampTeam[];
   loading: boolean;
 
   loadOrg: (orgId: string) => Promise<void>;
@@ -371,7 +371,7 @@ interface OrgState {
 export const useOrgStore = create<OrgState>((set) => ({
   org: null,
   members: [],
-  voltEdgeTeams: [],
+  ipRampTeams: [],
   loading: false,
 
   loadOrg: async (orgId: string) => {
@@ -395,8 +395,8 @@ export const useOrgStore = create<OrgState>((set) => ({
 
   loadOrgTeams: async (orgId: string) => {
     try {
-      const voltEdgeTeams = await listTeamsForOrg(orgId);
-      set({ voltEdgeTeams });
+      const ipRampTeams = await listTeamsForOrg(orgId);
+      set({ ipRampTeams });
     } catch {
       // silent
     }
@@ -425,22 +425,22 @@ export const useOrgStore = create<OrgState>((set) => ({
     }
   },
 
-  reset: () => set({ org: null, members: [], voltEdgeTeams: [], loading: false }),
+  reset: () => set({ org: null, members: [], ipRampTeams: [], loading: false }),
 }));
 
-// ─── VoltEdge Team Store (RBAC Team Management) ─────────────────
+// ─── IPRamp Team Store (RBAC Team Management) ─────────────────
 
-interface VoltEdgeTeamState {
-  teams: VoltEdgeTeam[];
+interface IPRampTeamState {
+  teams: IPRampTeam[];
   activeTeamId: string | null;
   loading: boolean;
 
   loadMyTeams: (userId: string) => Promise<void>;
   setActiveTeam: (teamId: string | null) => void;
-  getActiveTeam: () => VoltEdgeTeam | undefined;
+  getActiveTeam: () => IPRampTeam | undefined;
 }
 
-export const useVoltEdgeTeamStore = create<VoltEdgeTeamState>((set, get) => ({
+export const useIPRampTeamStore = create<IPRampTeamState>((set, get) => ({
   teams: [],
   activeTeamId: null,
   loading: false,
@@ -448,7 +448,7 @@ export const useVoltEdgeTeamStore = create<VoltEdgeTeamState>((set, get) => ({
   loadMyTeams: async (userId: string) => {
     set({ loading: true });
     try {
-      const teams = await listVoltEdgeTeams(userId);
+      const teams = await listIPRampTeams(userId);
       set({ teams, loading: false });
     } catch {
       set({ loading: false });
@@ -547,7 +547,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     // 1. Load from localStorage first (instant)
     if (typeof window !== "undefined") {
       try {
-        const raw = localStorage.getItem("voltedge:settings");
+        const raw = localStorage.getItem("ipramp:settings");
         if (raw) {
           const parsed = JSON.parse(raw);
           // Migration from old format (single anthropicApiKey)
@@ -556,7 +556,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
               provider: "anthropic" as AIProvider,
               keys: { anthropic: parsed.anthropicApiKey, openai: null, google: null },
             };
-            localStorage.setItem("voltedge:settings", JSON.stringify(migrated));
+            localStorage.setItem("ipramp:settings", JSON.stringify(migrated));
             set({ ...migrated, keyMeta: { anthropic: null, openai: null, google: null } });
           } else if (parsed.keys) {
             set({
@@ -617,7 +617,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
                     const state = get();
                     if (typeof window !== "undefined") {
                       localStorage.setItem(
-                        "voltedge:settings",
+                        "ipramp:settings",
                         JSON.stringify({ provider: state.provider, keys: state.keys })
                       );
                     }
@@ -641,7 +641,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const state = get();
     if (typeof window !== "undefined") {
       localStorage.setItem(
-        "voltedge:settings",
+        "ipramp:settings",
         JSON.stringify({ provider, keys: state.keys })
       );
     }
@@ -653,7 +653,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const keys = { ...s.keys, [provider]: key };
       if (typeof window !== "undefined") {
         localStorage.setItem(
-          "voltedge:settings",
+          "ipramp:settings",
           JSON.stringify({ provider: s.provider, keys })
         );
       }
@@ -686,7 +686,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const keys = { ...s.keys, [provider]: null };
       if (typeof window !== "undefined") {
         localStorage.setItem(
-          "voltedge:settings",
+          "ipramp:settings",
           JSON.stringify({ provider: s.provider, keys })
         );
       }

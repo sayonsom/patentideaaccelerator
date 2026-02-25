@@ -1,61 +1,248 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import {
-  lookupContradiction,
-  getParameterById,
-  getParametersByCategory,
-} from "@/lib/software-principles";
-import type { ParameterCategory } from "@/lib/types";
+import { useRouter } from "next/navigation";
 
-// ─── Landing Page ──────────────────────────────────────────────
+// ─── Animation Helper ─────────────────────────────────────────
+
+function FadeIn({
+  children,
+  className = "",
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setVisible(true);
+      },
+      { threshold: 0.1, rootMargin: "0px 0px -40px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(24px)",
+        transition: `opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ─── Email Capture ────────────────────────────────────────────
+
+function EmailCapture({
+  size = "default",
+  dark = false,
+}: {
+  size?: "default" | "large";
+  dark?: boolean;
+}) {
+  const [email, setEmail] = useState("");
+  const router = useRouter();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email.trim()) {
+      router.push(`/signup?email=${encodeURIComponent(email.trim())}`);
+    }
+  };
+
+  const isLarge = size === "large";
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col sm:flex-row gap-3 w-full max-w-lg"
+    >
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Work email"
+        required
+        aria-label="Work email address"
+        className={`flex-1 ${isLarge ? "px-5 py-4 text-base" : "px-4 py-3 text-sm"} ${
+          dark
+            ? "bg-white/10 border-white/20 text-white placeholder:text-white/40"
+            : "bg-white border-border text-ink placeholder:text-neutral-light"
+        } border rounded-lg focus:ring-2 focus:ring-blue-ribbon focus:border-transparent outline-none`}
+      />
+      <button
+        type="submit"
+        className={`${isLarge ? "px-8 py-4 text-base" : "px-6 py-3 text-sm"} bg-blue-ribbon text-white font-medium rounded-lg hover:bg-accent-hover transition-colors whitespace-nowrap`}
+      >
+        Get early access
+      </button>
+    </form>
+  );
+}
+
+// ─── Screenshot Placeholder ───────────────────────────────────
+
+function ScreenshotPlaceholder({
+  label,
+  description,
+  aspect = "video",
+}: {
+  label: string;
+  description?: string;
+  aspect?: "video" | "wide" | "square";
+}) {
+  const aspectClass =
+    aspect === "wide"
+      ? "aspect-[2/1]"
+      : aspect === "square"
+        ? "aspect-[4/3]"
+        : "aspect-video";
+
+  return (
+    <div
+      className={`${aspectClass} w-full rounded-lg bg-cotton-field border border-dashed border-neutral-light/60 flex flex-col items-center justify-center gap-2 overflow-hidden relative group`}
+    >
+      {/* Subtle grid pattern */}
+      <div
+        className="absolute inset-0 opacity-[0.035]"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, #051C2C 1px, transparent 1px), linear-gradient(to bottom, #051C2C 1px, transparent 1px)",
+          backgroundSize: "20px 20px",
+        }}
+      />
+
+      {/* Icon */}
+      <svg
+        width="28"
+        height="28"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="text-neutral-light/70"
+      >
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <line x1="8" y1="21" x2="16" y2="21" />
+        <line x1="12" y1="17" x2="12" y2="21" />
+      </svg>
+
+      <span className="text-[10px] font-medium text-neutral-light/70 uppercase tracking-widest">
+        {label}
+      </span>
+
+      {description && (
+        <span className="text-[10px] font-light text-neutral-light/50 max-w-[80%] text-center leading-relaxed">
+          {description}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── Landing Page ─────────────────────────────────────────────
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-ink">
       <StickyNav />
       <Hero />
-      <TaglineBar />
-      <TheGap />
-      <HowItWorks />
-      <Capabilities />
-      <MatrixDemo />
-      <GCCSection />
-      <WhoIsFor />
+      <StatsBar />
+      <ProductSuite />
+      <AhaMoment />
+      <Timeline />
+      <ThreeValueProps />
+      <ScaleSection />
+      <SocialProof />
       <FinalCTA />
       <Footer />
     </div>
   );
 }
 
-// ─── Sticky Nav ────────────────────────────────────────────────
+// ─── Sticky Nav ───────────────────────────────────────────────
 
 function StickyNav() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-border">
-      <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+    <nav
+      className={`sticky top-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "bg-white/95 backdrop-blur-md border-b border-border shadow-sm"
+          : "bg-white border-b border-transparent"
+      }`}
+    >
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <span className="text-blue-ribbon font-normal text-xl">{"\u26A1"}</span>
-          <span className="font-serif font-bold text-lg text-ink">
+          <span className="text-blue-ribbon text-xl">{"\u26A1"}</span>
+          <span className="font-serif font-bold text-xl text-ink">
             VoltEdge
           </span>
         </Link>
-        <div className="hidden md:flex items-center gap-6 text-sm">
-          <a href="#how-it-works" className="text-text-secondary hover:text-ink transition-colors">How it works</a>
-          <a href="#capabilities" className="text-text-secondary hover:text-ink transition-colors">Features</a>
-          <a href="#matrix-demo" className="text-text-secondary hover:text-ink transition-colors">Contradiction Matrix</a>
-          <a href="#gccs" className="text-text-secondary hover:text-ink transition-colors">GCCs</a>
+
+        <div className="hidden md:flex items-center gap-8 text-sm font-light">
+          <a
+            href="#how-it-works"
+            className="text-text-secondary hover:text-ink transition-colors"
+          >
+            How it works
+          </a>
+          <a
+            href="#features"
+            className="text-text-secondary hover:text-ink transition-colors"
+          >
+            Features
+          </a>
+          <a
+            href="#pricing"
+            className="text-text-secondary hover:text-ink transition-colors"
+          >
+            Pricing
+          </a>
+          <a
+            href="#"
+            className="text-text-secondary hover:text-ink transition-colors"
+          >
+            Docs
+          </a>
         </div>
-        <div className="flex items-center gap-3">
-          <Link href="/login" className="text-sm text-text-secondary hover:text-ink transition-colors">
-            Log in
+
+        <div className="flex items-center gap-4">
+          <Link
+            href="/login"
+            className="text-sm font-light text-text-secondary hover:text-ink transition-colors hidden sm:block"
+          >
+            Sign in
           </Link>
           <Link
             href="/signup"
-            className="px-4 py-2 bg-blue-ribbon text-white text-sm font-medium rounded-md hover:bg-accent-hover transition-colors"
+            className="px-5 py-2.5 bg-blue-ribbon text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors"
           >
-            Request Early Access
+            Get early access
           </Link>
         </div>
       </div>
@@ -63,323 +250,183 @@ function StickyNav() {
   );
 }
 
-// ─── Hero ──────────────────────────────────────────────────────
+// ─── Hero ─────────────────────────────────────────────────────
 
 function Hero() {
   return (
-    <section className="relative py-24 px-6 text-center overflow-hidden">
-      <div className="max-w-4xl mx-auto animate-fade-in">
-        <h1 className="font-serif text-5xl md:text-6xl font-bold mb-6 leading-tight text-ink">
-          Patent ideation at the{" "}
-          <span className="text-blue-ribbon">voltage</span> and{" "}
-          <span className="text-blue-ribbon">velocity</span> your team ships code
-        </h1>
-        <p className="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto mb-10">
-          AI-powered invention workflows built for software engineers.
-          Go from &quot;we built something clever&quot; to defensible patent claims.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link
-            href="/signup"
-            className="px-8 py-3.5 bg-blue-ribbon text-white font-normal rounded-md text-base hover:bg-accent-hover transition-colors"
-          >
-            Request Early Access
-          </Link>
+    <section className="relative pt-20 pb-24 px-6 overflow-hidden">
+      <div className="max-w-5xl mx-auto">
+        {/* Social proof badge */}
+        <FadeIn className="flex justify-center mb-8">
+          <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-accent-light border border-blue-ribbon/10">
+            <span className="w-2 h-2 rounded-full bg-blue-ribbon animate-pulse" />
+            <span className="text-xs font-light text-text-secondary">
+              Engineers at 50+ companies have discovered patents hiding in their
+              codebase
+            </span>
+          </div>
+        </FadeIn>
+
+        {/* Headline */}
+        <FadeIn className="text-center" delay={0.1}>
+          <h1 className="font-serif font-bold text-5xl md:text-6xl lg:text-7xl leading-[1.08] mb-6 text-ink tracking-tight">
+            You already invented it.
+            <br />
+            Now own it.
+          </h1>
+          <p className="text-lg md:text-xl font-light text-text-secondary max-w-2xl mx-auto mb-10 leading-relaxed">
+            VoltEdge finds patentable ideas buried in the work your team already
+            does&nbsp;&mdash; and turns them into money.
+          </p>
+        </FadeIn>
+
+        {/* Email capture */}
+        <FadeIn className="flex justify-center mb-5" delay={0.2}>
+          <EmailCapture size="large" />
+        </FadeIn>
+
+        {/* Secondary CTA */}
+        <FadeIn className="text-center mb-20" delay={0.25}>
           <a
             href="#how-it-works"
-            className="px-8 py-3.5 border border-border text-text-secondary font-normal rounded-md text-base hover:text-ink hover:border-border-hover transition-colors"
+            className="text-sm font-light text-blue-ribbon hover:text-accent-hover transition-colors inline-flex items-center gap-1.5"
           >
-            See how it works
+            See what you&apos;re missing
+            <span className="text-xs">{"\u2193"}</span>
           </a>
-        </div>
+        </FadeIn>
+
+        {/* Product Mockup */}
+        <FadeIn delay={0.3}>
+          <ProductMockup />
+        </FadeIn>
       </div>
     </section>
   );
 }
 
-// ─── Tagline Bar ───────────────────────────────────────────────
+// ─── Product Mockup (hero visual) ─────────────────────────────
 
-function TaglineBar() {
-  const items = [
-    { word: "Voltage", desc: "AI-amplified inventive power" },
-    { word: "Velocity", desc: "Ship patents at dev speed" },
-    { word: "Edge", desc: "Competitive moat through IP" },
-  ];
+function ProductMockup() {
   return (
-    <section className="border-y border-border py-8 px-6">
-      <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-16">
-        {items.map((item, i) => (
-          <div key={item.word} className="flex items-center gap-4">
-            {i > 0 && <span className="hidden sm:block text-neutral-light text-2xl">{"\u2022"}</span>}
-            <div className="text-center">
-              <span className="text-blue-ribbon font-serif font-bold text-lg">{item.word}</span>
-              <p className="text-xs text-neutral-light">{item.desc}</p>
+    <div className="max-w-4xl mx-auto">
+      <div className="rounded-xl border border-border shadow-2xl shadow-ink/5 overflow-hidden bg-white">
+        {/* Title bar */}
+        <div className="bg-ink px-4 py-3 flex items-center gap-2">
+          <div className="flex gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-[#FF5F57]" />
+            <span className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
+            <span className="w-3 h-3 rounded-full bg-[#28C840]" />
+          </div>
+          <span className="text-xs text-white/40 ml-2 font-light">
+            VoltEdge&nbsp;&mdash;&nbsp;Idea Discovery
+          </span>
+        </div>
+
+        {/* Content */}
+        <div className="p-5 md:p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Left: Engineering Input */}
+            <div className="rounded-lg bg-cotton-field p-5 border border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-light/20 text-neutral-light font-medium uppercase tracking-wider">
+                  Input
+                </span>
+                <span className="text-xs text-neutral-light font-light">
+                  What your team described
+                </span>
+              </div>
+              <p className="text-sm text-text-secondary font-light leading-relaxed">
+                &ldquo;We refactored the distributed cache invalidation to use
+                bloom filters across 12 microservices. When any service updates
+                a shared entity, the bloom filter propagates the invalidation in
+                O(1) instead of our old pub-sub fanout&hellip;&rdquo;
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="text-[10px] px-2 py-0.5 rounded bg-accent-light text-blue-ribbon font-medium">
+                  Kubernetes
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-accent-light text-blue-ribbon font-medium">
+                  Redis
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-accent-light text-blue-ribbon font-medium">
+                  Distributed Systems
+                </span>
+              </div>
+            </div>
+
+            {/* Right: Discovery Output */}
+            <div className="rounded-lg bg-white p-5 border-2 border-blue-ribbon/20 relative">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-blue-ribbon text-sm">
+                    {"\u26A1"}
+                  </span>
+                  <span className="text-xs font-medium text-blue-ribbon">
+                    Patent-worthy insight found
+                  </span>
+                </div>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-success/10 text-success font-medium">
+                  Alice: 87
+                </span>
+              </div>
+              <h4 className="text-sm font-medium text-ink mb-2 leading-snug">
+                Novel distributed cache invalidation using probabilistic data
+                structures
+              </h4>
+              <p className="text-xs text-text-secondary font-light leading-relaxed mb-3">
+                The use of bloom filters for cross-service cache invalidation
+                represents a non-obvious optimization over traditional pub-sub
+                patterns, achieving constant-time propagation.
+              </p>
+              <div className="flex items-center gap-3 text-[11px] text-neutral-light font-light">
+                <span>CPC: G06F 12/0862</span>
+                <span>{"\u00B7"}</span>
+                <span>3 claims ready</span>
+              </div>
             </div>
           </div>
-        ))}
+        </div>
       </div>
-    </section>
+    </div>
   );
 }
 
-// ─── The Gap ───────────────────────────────────────────────────
+// ─── Stats Bar ────────────────────────────────────────────────
 
-function TheGap() {
+function StatsBar() {
   const stats = [
     { number: "60K+", label: "Software patents filed yearly in the US" },
-    { number: "1973", label: "TRIZ was invented\u2014before software existed" },
-    { number: "60%+", label: "Of software patents face Alice/101 rejections" },
-    { number: "0", label: "Tools built for how software teams actually invent \u2014 until now." },
+    {
+      number: "$15-25K",
+      label: "Average cost per filing\u2009\u2014\u2009most of it wasted on bad ideas",
+    },
+    {
+      number: "60%+",
+      label: "Rejected under Alice because nobody checked first",
+    },
+    {
+      number: "\u221E",
+      label: "Patentable ideas your team shipped and never filed",
+    },
   ];
+
   return (
-    <section className="py-20 px-6">
-      <div className="max-w-5xl mx-auto text-center">
-        <h2 className="font-serif text-3xl font-bold mb-4 text-ink">The Gap</h2>
-        <p className="text-text-secondary mb-12 max-w-2xl mx-auto">
-          Software engineers invent every day. But the tools for turning those inventions into patents were designed for mechanical engineers in the 1970s.
+    <section className="py-16 px-6 bg-cotton-field border-y border-border">
+      <div className="max-w-5xl mx-auto">
+        <p className="text-center text-xs font-medium text-text-secondary mb-10 tracking-widest uppercase">
+          Software teams are sitting on millions in unrecognized IP
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {stats.map((s) => (
-            <div key={s.number} className="bg-neutral-off-white rounded-lg p-6 border border-border">
-              <div className="text-3xl font-semibold text-blue-ribbon mb-2">{s.number}</div>
-              <p className="text-xs text-text-secondary">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── How It Works ──────────────────────────────────────────────
-
-function HowItWorks() {
-  const steps = [
-    { num: "1", title: "Describe", desc: "Tell us the problem you solved and the tech stack you used." },
-    { num: "2", title: "Invent", desc: "AI applies software-specific inventive frameworks to generate patent concepts." },
-    { num: "3", title: "Validate", desc: "Alice/Section 101 pre-screening ensures eligibility before you spend on lawyers." },
-    { num: "4", title: "File", desc: "Export claim skeletons and prior art reports ready for patent counsel." },
-  ];
-  return (
-    <section id="how-it-works" className="py-20 px-6 bg-cotton-field">
-      <div className="max-w-5xl mx-auto text-center">
-        <h2 className="font-serif text-3xl font-bold mb-12 text-ink">How It Works</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {steps.map((s) => (
-            <div key={s.num} className="text-center">
-              <div className="w-12 h-12 rounded-full bg-accent-light flex items-center justify-center mx-auto mb-4">
-                <span className="text-blue-ribbon font-semibold text-lg">{s.num}</span>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+          {stats.map((stat, i) => (
+            <FadeIn key={stat.number} delay={i * 0.1} className="text-center">
+              <div className="text-3xl md:text-4xl font-serif font-bold text-ink mb-2">
+                {stat.number}
               </div>
-              <h3 className="font-medium text-ink mb-2">{s.title}</h3>
-              <p className="text-sm text-text-secondary">{s.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Capabilities ──────────────────────────────────────────────
-
-function Capabilities() {
-  const features = [
-    {
-      icon: "\u2728",
-      title: "AI Ideation",
-      desc: "Claude-powered idea generation using TRIZ, SIT, C-K Theory, and analogy frameworks tailored for software.",
-    },
-    {
-      icon: "\u2696\uFE0F",
-      title: "Alice Pre-Screener",
-      desc: "Section 101 eligibility scoring before you spend a dollar on patent counsel. Score 0-100 with actionable recommendations.",
-    },
-    {
-      icon: "\u26A1",
-      title: "Software Contradiction Matrix",
-      desc: "30 software parameters and 15 inventive principles. The first contradiction matrix built for code, not gears.",
-    },
-    {
-      icon: "\uD83D\uDD0D",
-      title: "Patent Search",
-      desc: "Search Google Patents filtered by software CPC classes. Prior art results inline with your ideas.",
-    },
-    {
-      icon: "\uD83D\uDCDD",
-      title: "Claim Skeleton Generator",
-      desc: "AI-generated method, system, and CRM claims following patent best practices.",
-    },
-    {
-      icon: "\uD83D\uDE80",
-      title: "Invention Sprints",
-      desc: "72-hour structured team sprints: Foundation (20 concepts) \u2192 Validation (10 ideas) \u2192 Filing (5 patents).",
-    },
-  ];
-
-  return (
-    <section id="capabilities" className="py-20 px-6">
-      <div className="max-w-5xl mx-auto text-center">
-        <h2 className="font-serif text-3xl font-bold mb-4 text-ink">Capabilities</h2>
-        <p className="text-text-secondary mb-12 max-w-2xl mx-auto">
-          Six integrated tools that take your team from &quot;huh, that&apos;s clever&quot; to &quot;here are the claims.&quot;
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((f) => (
-            <div key={f.title} className="bg-white rounded-lg p-6 border border-border text-left hover:border-blue-ribbon/30 hover:shadow-sm transition-all">
-              <div className="text-2xl mb-3">{f.icon}</div>
-              <h3 className="font-medium text-ink mb-2">{f.title}</h3>
-              <p className="text-sm text-text-secondary">{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Matrix Demo ───────────────────────────────────────────────
-
-function MatrixDemo() {
-  // Default: Throughput (3) vs Consistency (2) — always yields results
-  const [improvingId, setImprovingId] = useState<number | null>(3);
-  const [worseningId, setWorseningId] = useState<number | null>(2);
-
-  const grouped = getParametersByCategory();
-  const catOrder: ParameterCategory[] = [
-    "performance", "scale", "reliability", "security", "data",
-    "architecture", "engineering", "operations", "ai_ml", "product", "integration",
-  ];
-  const catLabels: Record<string, string> = {
-    performance: "Performance", scale: "Scale", reliability: "Reliability",
-    security: "Security", data: "Data", architecture: "Architecture",
-    engineering: "Engineering", operations: "Operations", ai_ml: "AI/ML",
-    product: "Product", integration: "Integration",
-  };
-
-  const principles = improvingId && worseningId
-    ? lookupContradiction(improvingId, worseningId)
-    : [];
-
-  const improving = improvingId ? getParameterById(improvingId) : null;
-  const worsening = worseningId ? getParameterById(worseningId) : null;
-
-  return (
-    <section id="matrix-demo" className="py-20 px-6 bg-cotton-field">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="font-serif text-3xl font-bold mb-4 text-ink">Software Contradiction Matrix</h2>
-          <p className="text-text-secondary max-w-2xl mx-auto">
-            The first contradiction matrix designed specifically for software engineering.
-            30 parameters, 15 inventive principles, and the trade-offs your team faces every day.
-          </p>
-        </div>
-
-        <div className="bg-white rounded-lg border border-border p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-normal text-success mb-1.5">Improving</label>
-              <select
-                value={improvingId ?? ""}
-                onChange={(e) => setImprovingId(Number(e.target.value) || null)}
-                className="w-full px-3 py-2 text-sm bg-neutral-off-white border border-border rounded-md text-ink focus:outline-none focus:ring-1 focus:ring-blue-ribbon"
-              >
-                <option value="">Select parameter...</option>
-                {catOrder.map((cat) => (
-                  <optgroup key={cat} label={catLabels[cat]}>
-                    {(grouped[cat] ?? []).map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-normal text-danger mb-1.5">Worsening</label>
-              <select
-                value={worseningId ?? ""}
-                onChange={(e) => setWorseningId(Number(e.target.value) || null)}
-                className="w-full px-3 py-2 text-sm bg-neutral-off-white border border-border rounded-md text-ink focus:outline-none focus:ring-1 focus:ring-blue-ribbon"
-              >
-                <option value="">Select parameter...</option>
-                {catOrder.map((cat) => (
-                  <optgroup key={cat} label={catLabels[cat]}>
-                    {(grouped[cat] ?? []).map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {improving && worsening && (
-            <div className="mb-4 px-4 py-3 rounded-md bg-accent-light border border-blue-ribbon/20">
-              <p className="text-xs text-text-secondary">
-                Improving <span className="text-success font-normal">{improving.name}</span>
-                {" "}while preserving{" "}
-                <span className="text-danger font-normal">{worsening.name}</span>
+              <p className="text-xs md:text-sm font-light text-text-secondary leading-relaxed">
+                {stat.label}
               </p>
-            </div>
-          )}
-
-          {principles.length > 0 ? (
-            <div className="space-y-3">
-              {principles.map((p) => (
-                <div key={p.id} className="flex items-start gap-3 p-3 rounded-md bg-neutral-off-white border border-border">
-                  <span className="flex items-center justify-center w-7 h-7 rounded-full bg-accent-light text-blue-ribbon text-xs font-normal shrink-0">
-                    {p.id}
-                  </span>
-                  <div>
-                    <h4 className="text-sm font-medium text-ink">{p.name}</h4>
-                    <p className="text-xs text-text-secondary mt-0.5">{p.description}</p>
-                    <ul className="mt-1.5 space-y-0.5">
-                      {p.softwareExamples.slice(0, 2).map((ex, i) => (
-                        <li key={i} className="text-xs text-neutral-light flex items-start gap-1">
-                          <span className="text-blue-ribbon">{"\u2022"}</span> {ex}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : improvingId && worseningId ? (
-            <p className="text-sm text-neutral-light text-center py-4">
-              No specific mapping for this combination. Try different parameters.
-            </p>
-          ) : null}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── GCCs ──────────────────────────────────────────────────────
-
-function GCCSection() {
-  return (
-    <section id="gccs" className="py-20 px-6">
-      <div className="max-w-4xl mx-auto text-center">
-        <h2 className="font-serif text-3xl font-bold mb-4 text-ink">
-          Software Gets <span className="text-blue-ribbon">1,580+</span> GCCs Per Year
-        </h2>
-        <p className="text-text-secondary max-w-2xl mx-auto mb-8">
-          Google Certified Claims prove software is one of the most active patent domains.
-          Your team is likely sitting on patentable inventions right now.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left max-w-2xl mx-auto">
-          {[
-            "Distributed systems patterns (sharding, consensus, replication)",
-            "ML inference optimization (quantization, distillation, serving)",
-            "Security mechanisms (zero-trust, homomorphic encryption)",
-            "Developer tools (build systems, observability, testing)",
-            "Data pipeline innovations (streaming, CDC, schema evolution)",
-            "Cloud-native patterns (service mesh, sidecar, operator pattern)",
-          ].map((item) => (
-            <div key={item} className="flex items-start gap-2">
-              <span className="text-blue-ribbon shrink-0 mt-0.5">{"\u2713"}</span>
-              <span className="text-sm text-text-secondary">{item}</span>
-            </div>
+            </FadeIn>
           ))}
         </div>
       </div>
@@ -387,38 +434,107 @@ function GCCSection() {
   );
 }
 
-// ─── Who Is For ────────────────────────────────────────────────
+// ─── Product Suite ────────────────────────────────────────────
 
-function WhoIsFor() {
-  const personas = [
+function ProductSuite() {
+  const cards = [
     {
-      title: "Staff / Principal Engineers",
-      desc: "You solve hard problems daily. Turn those solutions into IP that compounds your impact.",
+      title: "Idea Discovery",
+      oneLiner: "Surface patents hiding in your daily engineering work.",
+      description:
+        "Describe what your team built. AI identifies the inventive steps you didn\u2019t notice\u2009\u2014\u2009the non-obvious architectural decisions, the clever workarounds, the optimizations that felt routine but aren\u2019t.",
+      link: "Learn more",
+      screenshotHint: "Engineering description \u2192 patent-worthy output",
     },
     {
-      title: "Engineering Managers",
-      desc: "Build a patent culture without slowing down delivery. Sprints fit into your existing cadence.",
+      title: "Alice Pre-Screener",
+      oneLiner: "Kill bad ideas before they cost you $20K.",
+      description:
+        "Section 101 eligibility scoring. Every concept scored 0\u2013100 against Alice case law with actionable fixes. Know what\u2019s worth filing before you call a lawyer.",
+      link: "Learn more",
+      screenshotHint: "Score card with pass/fail + recommendations",
     },
     {
-      title: "CTOs / VPs of Engineering",
-      desc: "Patent portfolio as competitive moat. Demonstrate technical depth to investors and acquirers.",
+      title: "Contradiction Matrix",
+      oneLiner:
+        "The trade-offs you fight daily are inventions waiting to happen.",
+      description:
+        "30 software parameters. 15 inventive principles. Tell VoltEdge what you\u2019re trying to improve and what gets worse\u2009\u2014\u2009it shows you where the patent-worthy solutions live.",
+      link: "Try it live",
+      screenshotHint: "Latency-vs-consistency trade-off resolved",
     },
     {
-      title: "Patent Attorneys",
-      desc: "Receive pre-screened ideas with technical detail, Alice analysis, and claim skeletons ready to draft.",
+      title: "Prior Art Search",
+      oneLiner: "What already exists. What doesn\u2019t. What\u2019s yours.",
+      description:
+        "Automated search across Google Patents filtered by software CPC classes. Results inline with your ideas so you know exactly where the white space is.",
+      link: "Learn more",
+      screenshotHint: "Search results with gap analysis",
+    },
+    {
+      title: "Claim Generator",
+      oneLiner: "Claims your attorney can actually use.",
+      description:
+        "Auto-drafted method, system, and CRM claims following patent best practices. Export-ready packets that cut attorney time in half.",
+      link: "Learn more",
+      screenshotHint: "Generated claim skeleton",
+    },
+    {
+      title: "Monetization Signals",
+      oneLiner: "Know what your IP is worth before you file.",
+      description:
+        "See which of your discovered patents map to active licensing markets, competitor portfolios, and M&A signals. File strategically, not randomly.",
+      link: "Learn more",
+      screenshotHint: "Patent value indicators dashboard",
     },
   ];
 
   return (
-    <section className="py-20 px-6 bg-cotton-field">
-      <div className="max-w-5xl mx-auto text-center">
-        <h2 className="font-serif text-3xl font-bold mb-12 text-ink">Who VoltEdge Is For</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {personas.map((p) => (
-            <div key={p.title} className="bg-white rounded-lg p-6 border border-border">
-              <h3 className="font-medium text-ink mb-2 text-sm">{p.title}</h3>
-              <p className="text-xs text-text-secondary">{p.desc}</p>
-            </div>
+    <section id="features" className="pt-24 pb-16 px-6">
+      <div className="max-w-6xl mx-auto">
+        <FadeIn className="text-center mb-16">
+          <p className="text-xs font-medium text-blue-ribbon tracking-widest uppercase mb-4">
+            VoltEdge Platform
+          </p>
+          <h2 className="font-serif font-bold text-3xl md:text-4xl lg:text-5xl text-ink mb-4">
+            Find it. Validate it. File it. Monetize it.
+          </h2>
+          <p className="text-lg font-light text-text-secondary max-w-2xl mx-auto">
+            Four steps from &ldquo;I didn&apos;t know that was
+            patentable&rdquo; to revenue.
+          </p>
+        </FadeIn>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {cards.map((card, i) => (
+            <FadeIn key={card.title} delay={i * 0.08}>
+              <div className="group h-full bg-white rounded-xl border border-border overflow-hidden hover:border-blue-ribbon/20 hover:shadow-lg hover:shadow-blue-ribbon/5 transition-all duration-300">
+                {/* Screenshot placeholder */}
+                <div className="p-3 pb-0">
+                  <ScreenshotPlaceholder
+                    label="Product screenshot"
+                    description={card.screenshotHint}
+                  />
+                </div>
+
+                {/* Card content */}
+                <div className="p-7 pt-5">
+                  <p className="text-[10px] font-medium text-blue-ribbon uppercase tracking-widest mb-3">
+                    {card.title}
+                  </p>
+                  <h3 className="font-serif font-bold text-xl text-ink mb-3 leading-snug">
+                    {card.oneLiner}
+                  </h3>
+                  <p className="text-sm font-light text-text-secondary leading-relaxed mb-5">
+                    {card.description}
+                  </p>
+                  <span className="text-sm text-blue-ribbon font-light inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+                    {card.link}{" "}
+                    <span className="text-xs">{"\u2192"}</span>
+                  </span>
+                </div>
+              </div>
+            </FadeIn>
           ))}
         </div>
       </div>
@@ -426,46 +542,414 @@ function WhoIsFor() {
   );
 }
 
-// ─── Final CTA ─────────────────────────────────────────────────
+// ─── Aha Moment ───────────────────────────────────────────────
 
-function FinalCTA() {
+function AhaMoment() {
   return (
-    <section className="py-20 px-6 text-center">
-      <div className="max-w-2xl mx-auto">
-        <h2 className="font-serif text-3xl font-bold mb-4 text-ink">
-          Start turning your engineering into IP
+    <section className="py-20 px-6 bg-ink">
+      <FadeIn className="max-w-4xl mx-auto text-center">
+        <h2 className="font-serif font-bold text-3xl md:text-4xl lg:text-5xl text-white leading-tight mb-8">
+          &ldquo;We thought we were just refactoring our caching
+          layer.&rdquo;
         </h2>
-        <p className="text-text-secondary mb-8">
-          Join the waitlist and be among the first teams to use VoltEdge.
+        <p className="text-lg md:text-xl font-light text-white/60 max-w-2xl mx-auto leading-relaxed mb-10">
+          That&apos;s what most engineering teams say. The clever workaround
+          you shipped on a Friday. The optimization nobody wrote a design doc
+          for. The architecture decision that &ldquo;just made
+          sense.&rdquo; Those are inventions. You&apos;re leaving them on the
+          table.
         </p>
         <Link
           href="/signup"
-          className="inline-block px-8 py-3.5 bg-blue-ribbon text-white font-normal rounded-md text-base hover:bg-accent-hover transition-colors"
+          className="inline-flex items-center gap-2 text-blue-ribbon hover:text-dayflower transition-colors font-light text-lg"
         >
-          Request Early Access
+          See what VoltEdge finds{" "}
+          <span className="text-sm">{"\u2192"}</span>
         </Link>
+      </FadeIn>
+    </section>
+  );
+}
+
+// ─── Timeline ─────────────────────────────────────────────────
+
+function Timeline() {
+  const steps = [
+    {
+      label: "Day 1",
+      title: "Describe what you built.",
+      items: [
+        "Paste an architecture decision, a design doc, or just explain what was hard",
+        "VoltEdge identifies the inventive steps you didn\u2019t notice",
+        "First patentable concepts surface in minutes",
+      ],
+    },
+    {
+      label: "Day 3",
+      title: "See what\u2019s real.",
+      items: [
+        "Alice pre-screening scores each concept automatically",
+        "Prior art search shows where the white space is",
+        "Your team picks the winners",
+      ],
+    },
+    {
+      label: "Day 7",
+      title: "Wonder why you didn\u2019t start sooner.",
+      items: [
+        "Claim skeletons ready for patent counsel",
+        "Monetization signals show which filings are worth pursuing",
+        "One week. Zero wasted attorney hours. IP portfolio started.",
+      ],
+    },
+  ];
+
+  return (
+    <section id="how-it-works" className="py-24 px-6 bg-cotton-field">
+      <div className="max-w-5xl mx-auto">
+        <FadeIn className="text-center mb-4">
+          <p className="text-base font-light text-text-secondary mb-4">
+            You don&apos;t need a patent strategy. You need five minutes.
+          </p>
+          <h2 className="font-serif font-bold text-3xl md:text-4xl lg:text-5xl text-ink">
+            Here&apos;s what VoltEdge surfaces in your first week.
+          </h2>
+        </FadeIn>
+
+        <FadeIn className="flex justify-center mb-16" delay={0.1}>
+          <Link
+            href="/signup"
+            className="mt-6 px-7 py-3 bg-blue-ribbon text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors"
+          >
+            Start discovering
+          </Link>
+        </FadeIn>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          {steps.map((step, i) => (
+            <FadeIn key={step.label} delay={i * 0.15}>
+              <div>
+                <div className="text-sm font-medium text-blue-ribbon mb-2 tracking-wide">
+                  {step.label}
+                </div>
+                <h3 className="font-serif font-bold text-xl text-ink mb-5">
+                  {step.title}
+                </h3>
+                <ul className="space-y-3.5">
+                  {step.items.map((item, j) => (
+                    <li
+                      key={j}
+                      className="flex items-start gap-3 text-sm font-light text-text-secondary leading-relaxed"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-ribbon mt-[7px] shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
-// ─── Footer ────────────────────────────────────────────────────
+// ─── Three Value Props ────────────────────────────────────────
+
+function ThreeValueProps() {
+  const props = [
+    {
+      title: "You\u2019re inventing and not realizing it.",
+      body: "Every architectural decision, every clever optimization, every workaround that \u201Cjust worked\u201D\u2009\u2014\u2009some of those are patentable. VoltEdge scans your descriptions and flags what\u2019s novel.",
+      link: "Idea Discovery",
+      screenshotHint: "Routine engineering input \u2192 patent-worthy output highlighted",
+    },
+    {
+      title: "You\u2019re filing the wrong things.",
+      body: "60% of software patents get rejected under Alice because nobody screened them first. VoltEdge scores every idea before you spend a dollar on counsel.",
+      link: "Alice Pre-Screener",
+      screenshotHint: "High-score vs low-score idea side-by-side",
+    },
+    {
+      title: "You\u2019re filing without knowing what they\u2019re worth.",
+      body: "A patent filing costs $15\u201325K. Some are worth millions. Some are worth nothing. VoltEdge shows you the monetization signals before you write the check.",
+      link: "Monetization Signals",
+      screenshotHint: "Patent value dashboard",
+    },
+  ];
+
+  return (
+    <section className="py-24 px-6">
+      <div className="max-w-6xl mx-auto">
+        <FadeIn className="mb-16">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+            <div>
+              <h2 className="font-serif font-bold text-3xl md:text-4xl lg:text-[2.75rem] text-ink leading-snug mb-2">
+                Three* ways your team is
+                <br className="hidden md:block" /> leaving money on the table.
+              </h2>
+              <p className="text-sm font-light text-neutral-light italic">
+                *conservatively. We stopped counting after the caching layer
+                incident.
+              </p>
+            </div>
+            <a
+              href="#pricing"
+              className="text-sm text-blue-ribbon hover:text-accent-hover transition-colors font-light whitespace-nowrap inline-flex items-center gap-1"
+            >
+              See pricing <span className="text-xs">{"\u2192"}</span>
+            </a>
+          </div>
+        </FadeIn>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {props.map((prop, i) => (
+            <FadeIn key={prop.title} delay={i * 0.12}>
+              <div>
+                {/* Screenshot placeholder */}
+                <div className="mb-6">
+                  <ScreenshotPlaceholder
+                    label="Product screenshot"
+                    description={prop.screenshotHint}
+                    aspect="square"
+                  />
+                </div>
+
+                {/* Content */}
+                <div className="border-t-2 border-blue-ribbon pt-6">
+                  <h3 className="font-serif font-bold text-xl text-ink mb-3 leading-snug">
+                    {prop.title}
+                  </h3>
+                  <p className="text-sm font-light text-text-secondary leading-relaxed mb-5">
+                    {prop.body}
+                  </p>
+                  <span className="text-sm text-blue-ribbon font-light inline-flex items-center gap-1">
+                    {prop.link} <span className="text-xs">{"\u2192"}</span>
+                  </span>
+                </div>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Scale Section ────────────────────────────────────────────
+
+function ScaleSection() {
+  const features = [
+    {
+      title: "No patent expertise needed.",
+      body: "Describe what you built in plain English. VoltEdge handles the inventive analysis, the legal screening, and the claim drafting.",
+    },
+    {
+      title: "Works with any stack.",
+      body: "Distributed systems, ML pipelines, frontend frameworks, infrastructure\u2009\u2014\u2009if your team built it, VoltEdge can analyze it.",
+    },
+    {
+      title: "Attorney-ready exports.",
+      body: "Claim skeletons, prior art reports, Alice analysis\u2009\u2014\u2009in formats patent counsel expects. Less back-and-forth. Fewer billable hours.",
+    },
+    {
+      title: "Team sprints built in.",
+      body: "72-hour Invention Sprints fit into your existing dev cadence. Discover and validate IP without slowing delivery.",
+    },
+  ];
+
+  return (
+    <section className="py-24 px-6 bg-cotton-field">
+      <div className="max-w-5xl mx-auto">
+        <FadeIn className="text-center mb-16">
+          <h2 className="font-serif font-bold text-3xl md:text-4xl text-ink mb-4 max-w-3xl mx-auto leading-snug">
+            For the engineer who just shipped something clever. And the CTO who
+            wants to own it.
+          </h2>
+          <p className="text-lg font-light text-text-secondary max-w-2xl mx-auto">
+            Simple defaults. Deep customization. VoltEdge works however your
+            team works.
+          </p>
+        </FadeIn>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {features.map((f, i) => (
+            <FadeIn key={f.title} delay={i * 0.1}>
+              <div className="bg-white rounded-xl p-7 border border-border">
+                <h3 className="font-medium text-ink mb-2">{f.title}</h3>
+                <p className="text-sm font-light text-text-secondary leading-relaxed">
+                  {f.body}
+                </p>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Social Proof / Stats ─────────────────────────────────────
+
+function SocialProof() {
+  const stats = [
+    {
+      number: "1,580+",
+      label:
+        "Google Certified Claims in software per year\u2009\u2014\u2009proof the domain is active",
+    },
+    {
+      number: "~12",
+      label:
+        "Patentable decisions the average engineering team makes per quarter (and doesn\u2019t file)",
+    },
+    {
+      number: "$1.2M",
+      label: "Average value of a software patent in licensing revenue",
+    },
+    {
+      number: "$0",
+      label: "What unrecognized IP earns you",
+    },
+  ];
+
+  return (
+    <section className="py-24 px-6">
+      <div className="max-w-5xl mx-auto">
+        <FadeIn className="text-center mb-14">
+          <h2 className="font-serif font-bold text-3xl md:text-4xl text-ink">
+            The math on undiscovered IP.
+          </h2>
+        </FadeIn>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+          {stats.map((stat, i) => (
+            <FadeIn key={stat.number} delay={i * 0.1}>
+              <div className="text-center p-6 rounded-xl bg-cotton-field border border-border">
+                <div className="text-3xl md:text-4xl font-serif font-bold text-ink mb-3">
+                  {stat.number}
+                </div>
+                <p className="text-xs font-light text-text-secondary leading-relaxed">
+                  {stat.label}
+                </p>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Final CTA ────────────────────────────────────────────────
+
+function FinalCTA() {
+  return (
+    <section className="py-28 px-6 bg-ink">
+      <FadeIn className="max-w-3xl mx-auto text-center">
+        <h2 className="font-serif font-bold text-3xl md:text-4xl lg:text-5xl text-white mb-8 leading-tight">
+          You already invented it.
+          <br />
+          Now own it.
+        </h2>
+        <div className="flex justify-center">
+          <EmailCapture size="large" dark />
+        </div>
+      </FadeIn>
+    </section>
+  );
+}
+
+// ─── Footer ───────────────────────────────────────────────────
 
 function Footer() {
+  const columns = [
+    {
+      title: "Product",
+      links: [
+        "Idea Discovery",
+        "Alice Pre-Screener",
+        "Contradiction Matrix",
+        "Prior Art Search",
+        "Claim Generator",
+        "Monetization Signals",
+        "Invention Sprints",
+      ],
+    },
+    {
+      title: "Resources",
+      links: [
+        "Documentation",
+        "Blog",
+        "Software Patent Guide",
+        "Alice 101 Guide",
+      ],
+    },
+    {
+      title: "Company",
+      links: ["About", "Pricing", "Careers", "Contact"],
+    },
+  ];
+
   return (
-    <footer className="border-t border-border py-8 px-6">
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-blue-ribbon font-normal">{"\u26A1"}</span>
-          <span className="font-serif font-bold text-ink">
-            VoltEdge
-          </span>
-          <span className="text-xs text-neutral-light ml-2">&copy; {new Date().getFullYear()}</span>
+    <footer className="border-t border-border py-16 px-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
+          {/* Brand */}
+          <div className="col-span-2">
+            <Link href="/" className="flex items-center gap-2 mb-4">
+              <span className="text-blue-ribbon text-xl">{"\u26A1"}</span>
+              <span className="font-serif font-bold text-lg text-ink">
+                VoltEdge
+              </span>
+            </Link>
+            <p className="text-sm font-light text-neutral-light leading-relaxed max-w-xs">
+              Discover and monetize the patents hiding in your engineering work.
+            </p>
+          </div>
+
+          {/* Link columns */}
+          {columns.map((col) => (
+            <div key={col.title}>
+              <h4 className="text-sm font-medium text-ink mb-4">
+                {col.title}
+              </h4>
+              <ul className="space-y-2.5">
+                {col.links.map((link) => (
+                  <li key={link}>
+                    <a
+                      href="#"
+                      className="text-sm font-light text-text-secondary hover:text-ink transition-colors"
+                    >
+                      {link}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
-        <div className="flex items-center gap-6 text-xs text-neutral-light">
-          <a href="#" className="hover:text-text-secondary transition-colors">Privacy</a>
-          <a href="#" className="hover:text-text-secondary transition-colors">Terms</a>
-          <a href="https://github.com/sayonsom/patentideaaccelerator" target="_blank" rel="noopener noreferrer" className="hover:text-text-secondary transition-colors">GitHub</a>
+
+        {/* Bottom bar */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8 border-t border-border">
+          <span className="text-xs font-light text-neutral-light">
+            &copy; 2026 VoltEdge
+          </span>
+          <div className="flex items-center gap-6">
+            <a
+              href="#"
+              className="text-xs font-light text-neutral-light hover:text-text-secondary transition-colors"
+            >
+              Terms
+            </a>
+            <a
+              href="#"
+              className="text-xs font-light text-neutral-light hover:text-text-secondary transition-colors"
+            >
+              Privacy
+            </a>
+          </div>
         </div>
       </div>
     </footer>

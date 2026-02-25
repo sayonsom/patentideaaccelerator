@@ -52,7 +52,7 @@ import {
 
 // ─── Settings (localStorage — per device) ───────────────────────
 
-const SETTINGS_KEY = "voltedge:settings";
+const SETTINGS_KEY = "ipramp:settings";
 
 export interface AppSettings {
   provider: AIProvider;

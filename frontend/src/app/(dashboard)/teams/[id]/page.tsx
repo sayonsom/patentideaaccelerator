@@ -9,7 +9,7 @@ import { listTeamIdeasAction } from "@/lib/actions/ideas";
 import { listTeamSprintsAction } from "@/lib/actions/sprints";
 import { Button, Card, Spinner, Badge, Tabs, TabPanel, Modal, Input } from "@/components/ui";
 import { toast } from "@/components/ui/Toast";
-import type { VoltEdgeTeam, TeamMemberRecord, TeamInvite, Idea, Sprint } from "@/lib/types";
+import type { IPRampTeam, TeamMemberRecord, TeamInvite, Idea, Sprint } from "@/lib/types";
 
 export default function TeamDashboardPage() {
   const params = useParams();
@@ -17,7 +17,7 @@ export default function TeamDashboardPage() {
   const teamId = params.id as string;
   const { data: session, status } = useSession();
 
-  const [team, setTeam] = useState<VoltEdgeTeam | null>(null);
+  const [team, setTeam] = useState<IPRampTeam | null>(null);
   const [members, setMembers] = useState<TeamMemberRecord[]>([]);
   const [admin, setAdmin] = useState(false);
   const [loading, setLoading] = useState(true);

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════
-// Core Domain Types for VoltEdge
+// Core Domain Types for IPRamp
 // ═══════════════════════════════════════════════════════════════════
 
 export type AccountType = "personal" | "corporate";
@@ -44,7 +44,7 @@ export interface OrgMember {
   user?: Pick<User, "id" | "name" | "email">;
 }
 
-export interface VoltEdgeTeam {
+export interface IPRampTeam {
   id: string;
   name: string;
   orgId: string | null;

@@ -14,7 +14,7 @@ export interface WizardDraft {
 
 // ─── Constants ──────────────────────────────────────────────────
 
-const DRAFT_PREFIX = "voltedge:wizard-draft";
+const DRAFT_PREFIX = "ipramp:wizard-draft";
 const DEBOUNCE_MS = 2000;
 
 // ─── Hook ───────────────────────────────────────────────────────

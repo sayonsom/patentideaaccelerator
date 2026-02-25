@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { Card, Spinner, Button } from "@/components/ui";
 import { getOrganization, listOrgMembers } from "@/lib/actions/organizations";
 import { listTeamsForOrg } from "@/lib/actions/teams-management";
-import type { Organization, OrgMember, VoltEdgeTeam } from "@/lib/types";
+import type { Organization, OrgMember, IPRampTeam } from "@/lib/types";
 
 export default function AdminOverviewPage() {
   const { data: session } = useSession();
@@ -14,7 +14,7 @@ export default function AdminOverviewPage() {
 
   const [org, setOrg] = useState<Organization | null>(null);
   const [members, setMembers] = useState<OrgMember[]>([]);
-  const [teams, setTeams] = useState<VoltEdgeTeam[]>([]);
+  const [teams, setTeams] = useState<IPRampTeam[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -8,7 +8,7 @@ import {
   requireTeamAdmin,
   ForbiddenError,
 } from "@/lib/actions/authorization";
-import type { VoltEdgeTeam, TeamMemberRecord, TeamRole, TeamInvite } from "@/lib/types";
+import type { IPRampTeam, TeamMemberRecord, TeamRole, TeamInvite } from "@/lib/types";
 import type {
   Team as PrismaTeam,
   TeamMember as PrismaTeamMember,
@@ -32,9 +32,9 @@ function generateInviteCode(): string {
 
 // ─── Mappers ────────────────────────────────────────────────────
 
-function mapPrismaToVoltEdgeTeam(
+function mapPrismaToIPRampTeam(
   row: PrismaTeam & { _count?: { members: number } }
-): VoltEdgeTeam {
+): IPRampTeam {
   return {
     id: row.id,
     name: row.name,
@@ -83,7 +83,7 @@ export async function createTeam(data: {
   name: string;
   orgId?: string | undefined;
   creatorId: string;
-}): Promise<VoltEdgeTeam> {
+}): Promise<IPRampTeam> {
   const { userId } = await requireSession();
 
   // Ensure the caller can only create teams for themselves
@@ -108,7 +108,7 @@ export async function createTeam(data: {
   // Invalidate RBAC cache so teamIds[] is refreshed on next request
   invalidateRbacCache(userId);
 
-  return mapPrismaToVoltEdgeTeam(team);
+  return mapPrismaToIPRampTeam(team);
 }
 
 /**
@@ -118,14 +118,14 @@ export async function createTeam(data: {
  */
 export async function getTeamById(
   teamId: string
-): Promise<VoltEdgeTeam | null> {
+): Promise<IPRampTeam | null> {
   await requireTeamMember(teamId);
 
   const row = await prisma.team.findUnique({
     where: { id: teamId },
     include: { _count: { select: { members: true } } },
   });
-  return row ? mapPrismaToVoltEdgeTeam(row) : null;
+  return row ? mapPrismaToIPRampTeam(row) : null;
 }
 
 /**
@@ -135,7 +135,7 @@ export async function getTeamById(
  */
 export async function listTeamsForUser(
   userId: string
-): Promise<VoltEdgeTeam[]> {
+): Promise<IPRampTeam[]> {
   const { userId: sessionUserId } = await requireSession();
 
   // Users can only list their own teams
@@ -150,7 +150,7 @@ export async function listTeamsForUser(
     include: { _count: { select: { members: true } } },
     orderBy: { updatedAt: "desc" },
   });
-  return rows.map(mapPrismaToVoltEdgeTeam);
+  return rows.map(mapPrismaToIPRampTeam);
 }
 
 /**
@@ -158,7 +158,7 @@ export async function listTeamsForUser(
  *
  * @secured — Requires authentication. Caller must belong to the org.
  */
-export async function listTeamsForOrg(orgId: string): Promise<VoltEdgeTeam[]> {
+export async function listTeamsForOrg(orgId: string): Promise<IPRampTeam[]> {
   const { session } = await requireSession();
 
   // Caller must belong to this org
@@ -171,7 +171,7 @@ export async function listTeamsForOrg(orgId: string): Promise<VoltEdgeTeam[]> {
     include: { _count: { select: { members: true } } },
     orderBy: { updatedAt: "desc" },
   });
-  return rows.map(mapPrismaToVoltEdgeTeam);
+  return rows.map(mapPrismaToIPRampTeam);
 }
 
 /**
@@ -182,7 +182,7 @@ export async function listTeamsForOrg(orgId: string): Promise<VoltEdgeTeam[]> {
 export async function updateTeam(
   teamId: string,
   updates: { name?: string }
-): Promise<VoltEdgeTeam> {
+): Promise<IPRampTeam> {
   await requireTeamAdmin(teamId);
 
   const row = await prisma.team.update({
@@ -190,7 +190,7 @@ export async function updateTeam(
     data: updates,
     include: { _count: { select: { members: true } } },
   });
-  return mapPrismaToVoltEdgeTeam(row);
+  return mapPrismaToIPRampTeam(row);
 }
 
 /**

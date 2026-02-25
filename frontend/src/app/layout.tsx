@@ -3,17 +3,18 @@ import { SessionProvider } from "@/components/providers/SessionProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "VoltEdge — AI Patent Ideation for Developers",
+  title: "VoltEdge — Discover and Monetize Patents Hiding in Your Engineering Work",
   description:
-    "The first AI-powered patent platform built for software teams. Turn architecture decisions and mathematical innovations into defensible claims.",
+    "VoltEdge finds patentable ideas buried in the work your team already does and turns them into money. AI-powered patent discovery, Alice pre-screening, and claim generation for software teams.",
   keywords: [
-    "patent ideation",
+    "patent discovery",
     "software patents",
     "AI patent",
-    "TRIZ",
-    "invention",
+    "patent monetization",
     "Section 101",
     "Alice test",
+    "patent portfolio",
+    "engineering IP",
   ],
 };
 

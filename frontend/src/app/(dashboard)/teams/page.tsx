@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { listTeamsForUser, listTeamsForOrg } from "@/lib/actions/teams-management";
 import { Button, Card, Spinner, EmptyState } from "@/components/ui";
 
-interface VoltEdgeTeam {
+interface IPRampTeam {
   id: string;
   name: string;
   memberCount?: number;
@@ -14,7 +14,7 @@ interface VoltEdgeTeam {
 
 export default function TeamsPage() {
   const { data: session, status } = useSession();
-  const [teams, setTeams] = useState<VoltEdgeTeam[]>([]);
+  const [teams, setTeams] = useState<IPRampTeam[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isOrgAdmin =

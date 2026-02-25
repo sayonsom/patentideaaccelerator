@@ -6,7 +6,7 @@ function getEncryptionKey(): Buffer {
   const key = process.env.API_KEY_ENCRYPTION_SECRET;
   if (!key) {
     // Fallback for development — generate a deterministic key from NEXTAUTH_SECRET
-    const fallback = process.env.NEXTAUTH_SECRET || "voltedge-dev-secret-do-not-use-in-prod";
+    const fallback = process.env.NEXTAUTH_SECRET || "ipramp-dev-secret-do-not-use-in-prod";
     return crypto.createHash("sha256").update(fallback).digest();
   }
   // Key should be 32 bytes hex-encoded (64 chars)
