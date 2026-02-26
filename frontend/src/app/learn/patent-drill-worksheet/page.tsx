@@ -53,7 +53,9 @@ export default function PatentDrillPage() {
     <div>
       <Hero />
       <WhyThisMatters />
+      <UnifiedMethodology />
       <Methodology />
+      <AlicePreScreen />
       <InteractiveTool />
       <WorkedExamples />
       <WhenToUse />
@@ -176,6 +178,119 @@ function WhyThisMatters() {
   );
 }
 
+// ─── Unified Methodology ─────────────────────────────────────
+
+function UnifiedMethodology() {
+  return (
+    <section className="py-20 px-6 bg-ink">
+      <div className="max-w-5xl mx-auto">
+        <FadeIn className="text-center mb-12">
+          <p className="text-xs font-medium text-blue-ribbon tracking-widest uppercase mb-4">
+            Where This Fits
+          </p>
+          <h2 className="font-serif font-bold text-3xl md:text-4xl lg:text-[2.75rem] text-white leading-snug mb-4">
+            The principle is the compass.
+            <br />
+            The mechanism is the patent.
+          </h2>
+          <p className="text-base font-light text-white/50 max-w-2xl mx-auto leading-relaxed">
+            The Three-Layer Drill is Step 3 of a unified patent ideation workflow.
+            TRIZ tells you <em className="text-white/70">where to look</em>.
+            The drill tells you <em className="text-white/70">how deep to go</em>.
+            The Alice pre-screen tells you <em className="text-white/70">if it will survive</em>.
+          </p>
+        </FadeIn>
+
+        <FadeIn delay={0.1}>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[
+              {
+                step: "01",
+                label: "Contradiction",
+                desc: "Name the trade-off: what improves vs. what worsens",
+                color: "text-white/40",
+                bg: "bg-white/5",
+                border: "border-white/10",
+                link: { href: "/learn/software-triz-matrix", label: "Open TRIZ matrix" },
+              },
+              {
+                step: "02",
+                label: "Principles",
+                desc: "Look up the matrix cell \u2192 get 3 inventive directions",
+                color: "text-white/40",
+                bg: "bg-white/5",
+                border: "border-white/10",
+                link: { href: "/learn/software-triz-matrix#tool", label: "Browse principles" },
+              },
+              {
+                step: "03",
+                label: "Three-Layer Drill",
+                desc: "Obvious \u2192 Architectural \u2192 Inventive mechanism",
+                color: "text-success",
+                bg: "bg-success/10",
+                border: "border-success/20",
+                active: true,
+              },
+              {
+                step: "04",
+                label: "Alice Pre-Screen",
+                desc: "4 questions to verify your Layer 3 is patent-safe",
+                color: "text-warning",
+                bg: "bg-warning/10",
+                border: "border-warning/20",
+              },
+            ].map((s, i) => (
+              <FadeIn key={s.step} delay={0.15 + i * 0.08}>
+                <div className={`rounded-xl p-5 border ${s.border} ${s.bg} h-full relative ${s.active ? "ring-1 ring-success/40" : ""}`}>
+                  {s.active && (
+                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-bold text-success bg-ink px-2.5 py-0.5 rounded-full border border-success/30 uppercase tracking-widest">
+                      You are here
+                    </span>
+                  )}
+                  <span className={`text-[10px] font-bold ${s.color} uppercase tracking-widest`}>
+                    Step {s.step}
+                  </span>
+                  <h3 className="font-medium text-white text-sm mt-2 mb-1">
+                    {s.label}
+                  </h3>
+                  <p className="text-xs font-light text-white/50 leading-relaxed">
+                    {s.desc}
+                  </p>
+                  {s.link && (
+                    <Link
+                      href={s.link.href}
+                      className="text-[10px] font-medium text-blue-ribbon hover:text-blue-ribbon/80 mt-3 inline-flex items-center gap-1 transition-colors"
+                    >
+                      {s.link.label} {"\u2192"}
+                    </Link>
+                  )}
+                  {/* Connector arrow (hidden on mobile) */}
+                  {i < 3 && (
+                    <div className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-white/20 text-lg">
+                      {"\u2192"}
+                    </div>
+                  )}
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </FadeIn>
+
+        <FadeIn delay={0.5}>
+          <p className="text-center text-xs font-light text-white/30 mt-8">
+            Start at Step 1 with a{" "}
+            <Link href="/learn/software-triz-matrix" className="text-blue-ribbon hover:text-blue-ribbon/80 transition-colors">
+              TRIZ contradiction
+            </Link>
+            , or jump straight into the drill if you already know what you built.
+            Either way, always run the Alice pre-screen before filing.
+          </p>
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
 // ─── Methodology ──────────────────────────────────────────────
 
 function Methodology() {
@@ -211,7 +326,7 @@ function Methodology() {
       color: "bg-success/10 text-success border-success/20",
       tag: "INVENTION CANDIDATE",
       description:
-        "This is where patents live. The mechanism is specific, the combination is non-obvious, and it produces a measurable technical improvement. This is what your patent attorney needs.",
+        "This is where patents live. The mechanism is specific, the combination is non-obvious, and it produces a measurable technical improvement. If you used a TRIZ principle as your compass, this is where you describe exactly how you applied it. The principle gives the direction; your Layer 3 gives the coordinates.",
       example:
         "The eviction policy per cache key is dynamically selected by a lightweight gradient-boosted classifier trained on access-pattern features. The classifier is retrained incrementally every 10 minutes using the cache-miss stream as ground truth, creating a closed-loop adaptive system.",
       test: "Can you point to a specific, measurable technical improvement?",
@@ -228,9 +343,16 @@ function Methodology() {
           <h2 className="font-serif font-bold text-3xl md:text-4xl text-ink mb-4">
             Three layers of description. One invention.
           </h2>
-          <p className="text-lg font-light text-text-secondary max-w-2xl mx-auto">
+          <p className="text-lg font-light text-text-secondary max-w-2xl mx-auto mb-4">
             Every patentable system can be described at three levels. Most
             engineers stop at Layer 1. The patent lives in Layer 3.
+          </p>
+          <p className="text-sm font-light text-neutral-light max-w-xl mx-auto">
+            If you started with a{" "}
+            <Link href="/learn/software-triz-matrix" className="text-blue-ribbon hover:text-accent-hover transition-colors">
+              TRIZ contradiction
+            </Link>
+            , the inventive principle you found is your compass for Layer 3. If not, you can use this drill standalone &mdash; just describe what you built at three levels of depth.
           </p>
         </FadeIn>
 
@@ -295,47 +417,137 @@ function Methodology() {
           ))}
         </div>
 
-        {/* Alice callout */}
+        {/* TRIZ connection callout */}
         <FadeIn delay={0.4}>
-          <div className="mt-10 bg-ink rounded-xl p-7 md:p-8">
+          <div className="mt-10 bg-cotton-field rounded-xl p-6 md:p-8 border border-border">
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-lg">{"\u2696\uFE0F"}</span>
+              <div className="w-10 h-10 rounded-lg bg-blue-ribbon/10 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-lg">{"\u{1F9ED}"}</span>
               </div>
               <div>
-                <h3 className="font-serif font-bold text-lg text-white mb-2">
-                  Why Alice / Section 101 matters
+                <h3 className="font-serif font-bold text-lg text-ink mb-2">
+                  Stuck on Layer 3? Use a TRIZ principle as your compass.
                 </h3>
-                <p className="text-sm font-light text-white/60 leading-relaxed mb-4">
-                  The Alice v. CLS Bank Supreme Court decision established that
-                  abstract ideas implemented on a generic computer are not
-                  patentable. Over 60% of software patent rejections cite Alice.
-                  The drill includes a built-in Alice pre-screen to ensure your
-                  Layer 3 is anchored to a specific technical improvement, not
-                  just an abstract business method.
+                <p className="text-sm font-light text-text-secondary leading-relaxed mb-3">
+                  If you can describe Layer 1 and Layer 2 but struggle to find
+                  the inventive mechanism, go back to the Software TRIZ
+                  Contradiction Matrix. Identify the trade-off your system
+                  resolves, look up the cell, and use the suggested inventive
+                  principles to guide what your Layer 3 should describe.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                    <p className="text-[10px] font-medium text-success uppercase tracking-wider mb-1">
-                      Alice-safe
-                    </p>
-                    <p className="text-xs font-light text-white/50">
-                      &ldquo;Reduces p99 latency by 40% using a novel
-                      per-key learned eviction policy&rdquo;
-                    </p>
-                  </div>
-                  <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                    <p className="text-[10px] font-medium text-danger uppercase tracking-wider mb-1">
-                      Alice-risky
-                    </p>
-                    <p className="text-xs font-light text-white/50">
-                      &ldquo;Uses AI to optimize caching for better
-                      performance&rdquo;
+                <Link
+                  href="/learn/software-triz-matrix"
+                  className="text-sm font-medium text-blue-ribbon hover:text-accent-hover transition-colors inline-flex items-center gap-1"
+                >
+                  Open the TRIZ Contradiction Matrix {"\u2192"}
+                </Link>
+              </div>
+            </div>
+          </div>
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
+// ─── Alice Pre-Screen ────────────────────────────────────────
+
+function AlicePreScreen() {
+  const questions = [
+    {
+      num: 1,
+      question: "Does it improve a technical process?",
+      good: "Reduces p99 latency by 40% using per-key learned eviction",
+      bad: "Makes the user experience faster",
+      why: "The improvement must be to a technical process, not just a business outcome. Alice rejects claims directed at abstract business methods.",
+    },
+    {
+      num: 2,
+      question: "Is the improvement tied to a specific mechanism?",
+      good: "A gradient-boosted classifier selects eviction policies per cache key based on access-pattern features",
+      bad: "Uses AI to optimize caching for better performance",
+      why: "Vague references to \u201CAI\u201D or \u201Cmachine learning\u201D without describing how they work are fatal under Alice. Specificity is survival.",
+    },
+    {
+      num: 3,
+      question: "Would it require a specific implementation to work?",
+      good: "The classifier is retrained every 10 minutes using the cache-miss stream as ground truth labels",
+      bad: "The system learns and adapts over time",
+      why: "If your claim could be implemented a hundred different ways, it\u2019s probably too abstract. The narrower the implementation, the safer it is.",
+    },
+    {
+      num: 4,
+      question: "Is there something unconventional about how the components interact?",
+      good: "Cache-miss stream doubles as training data for the eviction model, creating a closed-loop adaptive system",
+      bad: "Components work together to improve performance",
+      why: "The Supreme Court looks for an \u201Cinventive concept\u201D \u2014 a non-conventional arrangement of components. If every part is standard and the combination is obvious, it fails Step 2 of the Alice test.",
+    },
+  ];
+
+  return (
+    <section className="py-20 px-6 bg-ink">
+      <div className="max-w-5xl mx-auto">
+        <FadeIn className="text-center mb-14">
+          <p className="text-xs font-medium text-warning tracking-widest uppercase mb-4">
+            Step 4 &mdash; Alice / Section 101 Pre-Screen
+          </p>
+          <h2 className="font-serif font-bold text-3xl md:text-4xl text-white mb-4">
+            Four questions before you file
+          </h2>
+          <p className="text-base font-light text-white/50 max-w-2xl mx-auto leading-relaxed">
+            Over 60% of software patent rejections cite Alice v. CLS Bank.
+            Before you spend $15&ndash;25K filing, run your Layer 3 through
+            these four questions. All four must pass.
+          </p>
+        </FadeIn>
+
+        <div className="space-y-5">
+          {questions.map((q, i) => (
+            <FadeIn key={q.num} delay={i * 0.1}>
+              <div className="bg-white/5 rounded-xl border border-white/10 p-6 md:p-7">
+                <div className="flex items-start gap-4">
+                  <span className="w-10 h-10 rounded-xl bg-warning/10 text-warning font-serif font-bold text-lg flex items-center justify-center shrink-0">
+                    {q.num}
+                  </span>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-white text-base mb-3">
+                      {q.question}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                      <div className="bg-success/5 rounded-lg p-3 border border-success/20">
+                        <p className="text-[10px] font-bold text-success uppercase tracking-wider mb-1.5">
+                          {"\u2705"} Alice-safe
+                        </p>
+                        <p className="text-xs font-light text-white/60 leading-relaxed">
+                          &ldquo;{q.good}&rdquo;
+                        </p>
+                      </div>
+                      <div className="bg-danger/5 rounded-lg p-3 border border-danger/20">
+                        <p className="text-[10px] font-bold text-danger uppercase tracking-wider mb-1.5">
+                          {"\u274C"} Alice-risky
+                        </p>
+                        <p className="text-xs font-light text-white/60 leading-relaxed">
+                          &ldquo;{q.bad}&rdquo;
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-xs font-light text-white/40 leading-relaxed">
+                      {q.why}
                     </p>
                   </div>
                 </div>
               </div>
-            </div>
+            </FadeIn>
+          ))}
+        </div>
+
+        <FadeIn delay={0.5}>
+          <div className="mt-8 text-center">
+            <p className="text-sm font-light text-white/30">
+              If any answer is &ldquo;no,&rdquo; go back to Layer 3 and add
+              more specificity. The drill&rsquo;s built-in Alice toggle checks
+              each layer automatically.
+            </p>
           </div>
         </FadeIn>
       </div>
@@ -390,6 +602,7 @@ function WorkedExamples() {
     {
       title: "Adaptive Rate Limiter with Behavioral Trust Scoring",
       contradiction: "Throughput vs. Security",
+      trizPrinciple: "Principle 15 \u2014 Dynamics (adaptive algorithms, self-tuning systems)",
       layers: [
         {
           level: 1,
@@ -414,6 +627,7 @@ function WorkedExamples() {
     {
       title: "ML Feature Store with Point-in-Time Consistency",
       contradiction: "Data Freshness vs. Consistency",
+      trizPrinciple: "Principle 13 \u2014 The Other Way Around (invert the dependency)",
       layers: [
         {
           level: 1,
@@ -445,10 +659,11 @@ function WorkedExamples() {
             Worked Examples
           </p>
           <h2 className="font-serif font-bold text-3xl md:text-4xl text-ink mb-4">
-            See the drill in action
+            See the full workflow in action
           </h2>
           <p className="text-base font-light text-text-secondary max-w-xl mx-auto">
-            Two real engineering scenarios walked through all three layers.
+            Two real engineering scenarios walked through the complete method:
+            TRIZ contradiction {"\u2192"} inventive principle {"\u2192"} three-layer drill.
             Notice how the same system transforms as you add specificity.
           </p>
         </FadeIn>
@@ -458,13 +673,20 @@ function WorkedExamples() {
             <FadeIn key={ex.title} delay={i * 0.1}>
               <div className="bg-white rounded-xl border border-border overflow-hidden">
                 {/* Header */}
-                <div className="px-7 py-5 border-b border-border flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="font-serif font-bold text-lg text-ink">
-                    {ex.title}
-                  </h3>
-                  <span className="text-[10px] font-medium px-3 py-1 rounded-full bg-accent-light text-blue-ribbon uppercase tracking-wider">
-                    {ex.contradiction}
-                  </span>
+                <div className="px-7 py-5 border-b border-border">
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                    <h3 className="font-serif font-bold text-lg text-ink">
+                      {ex.title}
+                    </h3>
+                    <span className="text-[10px] font-medium px-3 py-1 rounded-full bg-accent-light text-blue-ribbon uppercase tracking-wider">
+                      {ex.contradiction}
+                    </span>
+                  </div>
+                  {ex.trizPrinciple && (
+                    <p className="text-xs font-light text-neutral-light flex items-center gap-1.5">
+                      <span className="text-blue-ribbon">{"\u{1F9ED}"}</span> TRIZ compass: {ex.trizPrinciple}
+                    </p>
+                  )}
                 </div>
 
                 {/* Layers */}
@@ -568,9 +790,10 @@ function CTA() {
           The platform does the rest.
         </h2>
         <p className="text-base font-light text-white/50 max-w-xl mx-auto mb-10 leading-relaxed">
-          VoltEdge combines this drill with AI-powered ideation, automatic Alice
-          scoring, prior art search, and claim generation. One tool. Zero wasted
-          attorney hours.
+          VoltEdge combines TRIZ contradiction analysis, the three-layer drill,
+          and AI-powered Alice scoring into one continuous workflow. Add prior
+          art search and claim generation, and you go from trade-off to filing
+          in a single tool.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-4">
           <Link

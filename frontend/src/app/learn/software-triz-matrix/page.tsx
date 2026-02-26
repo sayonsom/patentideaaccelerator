@@ -53,6 +53,7 @@ export default function SoftwareTRIZPage() {
     <div>
       <Hero />
       <WhyThisMatters />
+      <UnifiedMethodology />
       <HowItWorks />
       <InteractiveTool />
       <Walkthrough />
@@ -188,41 +189,146 @@ function WhyThisMatters() {
   );
 }
 
+// ─── Unified Methodology ──────────────────────────────────────
+
+function UnifiedMethodology() {
+  return (
+    <section className="py-20 px-6 bg-ink">
+      <div className="max-w-5xl mx-auto">
+        <FadeIn className="text-center mb-12">
+          <p className="text-xs font-medium text-blue-ribbon tracking-widest uppercase mb-4">
+            The IP Ramp Method
+          </p>
+          <h2 className="font-serif font-bold text-3xl md:text-4xl lg:text-[2.75rem] text-white leading-snug mb-4">
+            The principle is the compass.
+            <br />
+            The mechanism is the patent.
+          </h2>
+          <p className="text-base font-light text-white/50 max-w-2xl mx-auto leading-relaxed">
+            TRIZ tells you <em className="text-white/70">where to look</em>.
+            The Three-Layer Drill tells you <em className="text-white/70">how deep to go</em>.
+            The Alice Pre-Screen tells you <em className="text-white/70">if it will survive</em>.
+            Together, they form one continuous workflow from engineering trade-off to defensible patent.
+          </p>
+        </FadeIn>
+
+        <FadeIn delay={0.1}>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[
+              {
+                step: "01",
+                label: "Contradiction",
+                desc: "Name the trade-off: what improves vs. what worsens",
+                color: "text-blue-ribbon",
+                bg: "bg-blue-ribbon/10",
+                border: "border-blue-ribbon/20",
+              },
+              {
+                step: "02",
+                label: "Principles",
+                desc: "Look up the matrix cell \u2192 get 3 inventive directions",
+                color: "text-blue-ribbon",
+                bg: "bg-blue-ribbon/10",
+                border: "border-blue-ribbon/20",
+              },
+              {
+                step: "03",
+                label: "Three-Layer Drill",
+                desc: "Obvious \u2192 Architectural \u2192 Inventive mechanism",
+                color: "text-success",
+                bg: "bg-success/10",
+                border: "border-success/20",
+                link: "/learn/patent-drill-worksheet",
+              },
+              {
+                step: "04",
+                label: "Alice Pre-Screen",
+                desc: "4 questions to verify your Layer 3 is patent-safe",
+                color: "text-warning",
+                bg: "bg-warning/10",
+                border: "border-warning/20",
+              },
+            ].map((s, i) => (
+              <FadeIn key={s.step} delay={0.15 + i * 0.08}>
+                <div className={`rounded-xl p-5 border ${s.border} ${s.bg} h-full relative`}>
+                  <span className={`text-[10px] font-bold ${s.color} uppercase tracking-widest`}>
+                    Step {s.step}
+                  </span>
+                  <h3 className="font-medium text-white text-sm mt-2 mb-1">
+                    {s.label}
+                  </h3>
+                  <p className="text-xs font-light text-white/50 leading-relaxed">
+                    {s.desc}
+                  </p>
+                  {s.link && (
+                    <Link
+                      href={s.link}
+                      className="text-[10px] font-medium text-success hover:text-success/80 mt-3 inline-flex items-center gap-1 transition-colors"
+                    >
+                      Open drill worksheet {"\u2192"}
+                    </Link>
+                  )}
+                  {/* Connector arrow (hidden on mobile) */}
+                  {i < 3 && (
+                    <div className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-white/20 text-lg">
+                      {"\u2192"}
+                    </div>
+                  )}
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </FadeIn>
+
+        <FadeIn delay={0.5}>
+          <p className="text-center text-xs font-light text-white/30 mt-8">
+            This methodology is derived from 200,000+ patent analyses. Each step builds on the last.
+            Skipping steps produces weaker patents.
+          </p>
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
 // ─── How It Works ─────────────────────────────────────────────
 
 function HowItWorks() {
   const steps = [
     {
       num: "01",
-      title: "Identify the contradiction",
+      title: "Identify your contradiction",
       description:
-        "Every non-trivial engineering decision involves a trade-off. You improved latency but made consistency harder. You tightened security but degraded throughput. Name both sides.",
+        "Every non-trivial engineering decision involves a trade-off. Find the parameter you want to improve (the ROW) and the parameter that worsens as a result (the COLUMN). Be specific \u2014 \u201Cperformance\u201D is too vague; \u201Clatency\u201D or \u201Cthroughput\u201D is precise.",
       example:
         "\"We need to improve Latency, but every approach we've tried worsens Consistency.\"",
     },
     {
       num: "02",
-      title: "Find it in the matrix",
+      title: "Read the cell and look up principles",
       description:
-        "The matrix rows represent what you're improving. The columns represent what gets worse. The cell at their intersection contains 2-3 inventive principle numbers.",
+        "The cell at the intersection contains 3 inventive principle IDs, ordered by relevance. Look each up in the Principle Quick Reference. Each principle is a general strategy \u2014 a compass heading, not GPS coordinates.",
       example:
-        "Latency (row) vs. Consistency (column) \u2192 Principles: 16, 4, 13",
+        "Latency (row) vs. Consistency (column) \u2192 Principles: 16 (Partial Action), 4 (Asymmetry), 13 (The Other Way Around)",
     },
     {
       num: "03",
-      title: "Read the principles",
+      title: "Apply the Three-Layer Drill",
+      subtitle: "This is where most teams fail \u2014 and where patents are born",
       description:
-        "Each principle is a general strategy with concrete software examples. They don't give you the answer \u2014 they give you a direction. Your specific implementation is where the invention lives.",
+        "Use the principle as a starting direction, then describe your solution at three levels of depth. Layer 1 is the obvious description (not patentable). Layer 2 adds architectural detail (maybe patentable). Layer 3 describes the inventive mechanism \u2014 the specific, novel, non-obvious way you resolved the contradiction. Layer 3 is the patent.",
       example:
-        "Principle 16 (Partial or Excessive Action): \"Eventual consistency \u2014 assume no conflict, only check at commit time. Cheaper than pessimistic locks.\"",
+        "Layer 1: \"We use eventual consistency.\" Layer 2: \"We use optimistic locking with version vectors in a CRDT-based store.\" Layer 3: \"Each partition maintains a causal dependency graph that prunes stale writes using vector clock compression, reducing conflict resolution from O(n\u00B2) to O(log n) while preserving causal ordering guarantees across geo-distributed replicas.\"",
+      link: { href: "/learn/patent-drill-worksheet", label: "Open the full Three-Layer Drill" },
     },
     {
       num: "04",
-      title: "Ask the patent question",
+      title: "Run the Alice / Section 101 pre-screen",
+      subtitle: "Four questions that predict whether your patent survives",
       description:
-        "Does your solution use one of these principles in a novel, non-obvious way? If a skilled engineer wouldn't naturally arrive at your specific implementation, you may have an invention.",
+        "Before you spend $15\u201325K filing, ask four questions about your Layer 3: Does it improve a technical process (not just a business outcome)? Is the improvement tied to a specific mechanism (not \u201Cusing AI to optimize\u201D)? Would it require a specific implementation to work? Is there something unconventional about how components interact?",
       example:
-        "\"We combined eventual consistency (P16) with CQRS (P4) and inverted the dependency (P13) in a way that hasn't been published before.\"",
+        "Good: \"Reduces p99 latency by 40% using per-key learned eviction.\" Bad: \"Uses AI to optimize caching for better performance.\" The first is Alice-safe. The second gets rejected.",
     },
   ];
 
@@ -231,11 +337,16 @@ function HowItWorks() {
       <div className="max-w-5xl mx-auto">
         <FadeIn className="text-center mb-16">
           <p className="text-xs font-medium text-blue-ribbon tracking-widest uppercase mb-4">
-            How to use it
+            The Full Method
           </p>
           <h2 className="font-serif font-bold text-3xl md:text-4xl text-ink mb-4">
-            Four steps from trade-off to invention
+            From trade-off to patent in four steps
           </h2>
+          <p className="text-base font-light text-text-secondary max-w-2xl mx-auto">
+            The TRIZ matrix is Step 1. What you do after \u2014 the Three-Layer
+            Drill and Alice pre-screen \u2014 is what separates a clever
+            observation from a defensible patent.
+          </p>
         </FadeIn>
 
         <div className="space-y-6">
@@ -248,9 +359,14 @@ function HowItWorks() {
                   </span>
                 </div>
                 <div className="flex-1 pb-6 border-b border-border last:border-0">
-                  <h3 className="font-serif font-bold text-lg text-ink mb-2">
+                  <h3 className="font-serif font-bold text-lg text-ink mb-1">
                     {step.title}
                   </h3>
+                  {step.subtitle && (
+                    <p className="text-xs font-medium text-blue-ribbon mb-2">
+                      {step.subtitle}
+                    </p>
+                  )}
                   <p className="text-sm font-light text-text-secondary leading-relaxed mb-3">
                     {step.description}
                   </p>
@@ -259,11 +375,33 @@ function HowItWorks() {
                       {step.example}
                     </p>
                   </div>
+                  {step.link && (
+                    <Link
+                      href={step.link.href}
+                      className="text-sm font-light text-blue-ribbon hover:text-accent-hover transition-colors inline-flex items-center gap-1 mt-3"
+                    >
+                      {step.link.label} {"\u2192"}
+                    </Link>
+                  )}
                 </div>
               </div>
             </FadeIn>
           ))}
         </div>
+
+        {/* Key insight callout */}
+        <FadeIn delay={0.5}>
+          <div className="mt-10 bg-cotton-field rounded-xl p-6 md:p-8 border border-border text-center">
+            <p className="font-serif font-bold text-xl md:text-2xl text-ink mb-2">
+              &ldquo;The principle is the compass. The mechanism is the patent.&rdquo;
+            </p>
+            <p className="text-sm font-light text-text-secondary max-w-lg mx-auto">
+              TRIZ principles give you a direction. Your specific, non-obvious
+              implementation \u2014 the Layer 3 mechanism \u2014 is what gets
+              granted.
+            </p>
+          </div>
+        </FadeIn>
       </div>
     </section>
   );
