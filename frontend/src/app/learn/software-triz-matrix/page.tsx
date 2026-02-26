@@ -343,8 +343,8 @@ function HowItWorks() {
             From trade-off to patent in four steps
           </h2>
           <p className="text-base font-light text-text-secondary max-w-2xl mx-auto">
-            The TRIZ matrix is Step 1. What you do after \u2014 the Three-Layer
-            Drill and Alice pre-screen \u2014 is what separates a clever
+            The TRIZ matrix is Step 1. What you do after &mdash; the Three-Layer
+            Drill and Alice pre-screen &mdash; is what separates a clever
             observation from a defensible patent.
           </p>
         </FadeIn>
@@ -397,7 +397,7 @@ function HowItWorks() {
             </p>
             <p className="text-sm font-light text-text-secondary max-w-lg mx-auto">
               TRIZ principles give you a direction. Your specific, non-obvious
-              implementation \u2014 the Layer 3 mechanism \u2014 is what gets
+              implementation &mdash; the Layer 3 mechanism &mdash; is what gets
               granted.
             </p>
           </div>
