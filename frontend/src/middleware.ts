@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server";
 
 // Routes that require authentication
 const PROTECTED_PATHS = [
+  "/home",
   "/ideas",
   "/portfolio",
   "/sprints",
@@ -58,8 +59,8 @@ export async function middleware(request: NextRequest) {
   // ─── Layer 3: Role-based route protection ────────────────────
   const isAdminRoute = ADMIN_PATHS.some((p) => pathname.startsWith(p));
   if (isAdminRoute && token.orgRole !== "business_admin") {
-    // Redirect non-admins to ideas page
-    return NextResponse.redirect(new URL("/ideas", request.url));
+    // Redirect non-admins to home page
+    return NextResponse.redirect(new URL("/home", request.url));
   }
 
   return NextResponse.next();
@@ -67,6 +68,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/home/:path*",
     "/ideas/:path*",
     "/portfolio/:path*",
     "/sprints/:path*",

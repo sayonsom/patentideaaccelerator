@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/ideas";
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/home";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -137,7 +137,7 @@ function LoginForm() {
         <p className="text-xs text-neutral-light">
           Don&apos;t have an account?{" "}
           <Link
-            href={callbackUrl !== "/ideas" ? `/signup?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/signup"}
+            href={callbackUrl !== "/home" ? `/signup?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/signup"}
             className="text-blue-ribbon hover:underline"
           >
             Create one

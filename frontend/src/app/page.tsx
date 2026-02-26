@@ -223,12 +223,12 @@ function StickyNav() {
           >
             Pricing
           </a>
-          <a
-            href="#"
+          <Link
+            href="/learn/patent-drill-worksheet"
             className="text-text-secondary hover:text-ink transition-colors"
           >
-            Docs
-          </a>
+            Learn
+          </Link>
         </div>
 
         <div className="flex items-center gap-4">
@@ -878,12 +878,12 @@ function Footer() {
       ],
     },
     {
-      title: "Resources",
+      title: "Learn",
       links: [
-        "Documentation",
-        "Blog",
-        "Software Patent Guide",
-        "Alice 101 Guide",
+        { label: "Patent Drill Worksheet", href: "/learn/patent-drill-worksheet" },
+        { label: "Software TRIZ Matrix", href: "/learn/software-triz-matrix" },
+        { label: "Software Patent Guide", href: "#" },
+        { label: "Alice 101 Guide", href: "#" },
       ],
     },
     {
@@ -916,16 +916,20 @@ function Footer() {
                 {col.title}
               </h4>
               <ul className="space-y-2.5">
-                {col.links.map((link) => (
-                  <li key={link}>
-                    <a
-                      href="#"
-                      className="text-sm font-light text-text-secondary hover:text-ink transition-colors"
-                    >
-                      {link}
-                    </a>
-                  </li>
-                ))}
+                {col.links.map((link: string | { label: string; href: string }) => {
+                  const label = typeof link === "string" ? link : link.label;
+                  const href = typeof link === "string" ? "#" : link.href;
+                  return (
+                    <li key={label}>
+                      <Link
+                        href={href}
+                        className="text-sm font-light text-text-secondary hover:text-ink transition-colors"
+                      >
+                        {label}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}

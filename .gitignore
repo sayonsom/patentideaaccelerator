@@ -1,6 +1,7 @@
 # Next.js
 .next/
 out/
+gcp_keys/
 
 # Node modules
 node_modules/
