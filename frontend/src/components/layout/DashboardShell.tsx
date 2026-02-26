@@ -11,7 +11,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     () => ({
       type: "general",
       id: null,
-      label: "VoltEdge Assistant",
+      label: "IP Ramp Assistant",
       data: {},
     }),
     []

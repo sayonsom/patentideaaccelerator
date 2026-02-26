@@ -25,7 +25,7 @@ function LearnNav() {
           <Link href="/" className="flex items-center gap-2">
             <span className="text-blue-ribbon text-xl">{"\u26A1"}</span>
             <span className="font-serif font-bold text-xl text-ink">
-              VoltEdge
+              IP Ramp
             </span>
           </Link>
           <span className="hidden sm:block text-neutral-light/40">|</span>
@@ -111,8 +111,8 @@ function LearnFooter() {
                     </p>
                     <p className="text-xs font-light text-text-secondary leading-relaxed font-mono bg-cotton-field/50 rounded px-3 py-2">
                       IP Ramp. (2026). <em>The Three-Layer Patent Ideation Drill
-                      / Software TRIZ Contradiction Matrix</em>. VoltEdge Patent
-                      Ideation Platform. https://voltedge.com/learn/
+                      / Software TRIZ Contradiction Matrix</em>. IP Ramp Patent
+                      Ideation Platform. https://ipramp.com/learn/
                     </p>
                   </div>
                   <div>
@@ -120,7 +120,7 @@ function LearnFooter() {
                       Workshop / Presentation
                     </p>
                     <p className="text-xs font-light text-text-secondary leading-relaxed font-mono bg-cotton-field/50 rounded px-3 py-2">
-                      Framework by IP Ramp (voltedge.com). Used with permission
+                      Framework by IP Ramp (ipramp.com). Used with permission
                       under CC BY-NC-ND 4.0.
                     </p>
                   </div>
@@ -148,7 +148,7 @@ function LearnFooter() {
             <Link href="/" className="flex items-center gap-2">
               <span className="text-blue-ribbon text-lg">{"\u26A1"}</span>
               <span className="font-serif font-bold text-base text-ink">
-                VoltEdge
+                IP Ramp
               </span>
             </Link>
             <span className="text-xs font-light text-neutral-light">

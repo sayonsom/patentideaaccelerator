@@ -288,7 +288,7 @@ function OnboardingContent() {
             <span className="text-3xl">&#9889;</span>
           </div>
           <h1 className="text-3xl font-serif font-bold text-ink mb-3">
-            Welcome to VoltEdge, {userName}
+            Welcome to IP Ramp, {userName}
           </h1>
           <p className="text-neutral-dark text-sm leading-relaxed max-w-md mx-auto mb-8">
             Turn your engineering breakthroughs into defensible patents.
@@ -354,7 +354,7 @@ function OnboardingContent() {
                 />
               </div>
               <span className="text-sm text-ink leading-relaxed">
-                I agree to receive communications from VoltEdge
+                I agree to receive communications from IP Ramp
               </span>
             </label>
           </div>

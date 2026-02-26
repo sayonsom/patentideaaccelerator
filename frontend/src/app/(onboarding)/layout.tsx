@@ -13,7 +13,7 @@ export default function OnboardingLayout({
       <header className="h-14 border-b border-border flex items-center px-6">
         <Link href="/" className="flex items-center gap-2">
           <span className="text-blue-ribbon text-lg">&#9889;</span>
-          <span className="font-serif font-bold text-ink text-lg">VoltEdge</span>
+          <span className="font-serif font-bold text-ink text-lg">IP Ramp</span>
         </Link>
       </header>
 

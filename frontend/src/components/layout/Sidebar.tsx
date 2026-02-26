@@ -182,7 +182,7 @@ export function Sidebar() {
           <span className="text-blue-ribbon font-normal text-xl shrink-0">{"\u26A1"}</span>
           {!collapsed && (
             <span className="font-serif font-bold text-ink text-lg tracking-tight whitespace-nowrap">
-              VoltEdge
+              IP Ramp
             </span>
           )}
         </Link>
@@ -314,7 +314,7 @@ export function Sidebar() {
             )}
           </div>
         ) : (
-          !collapsed && <p className="text-xs text-neutral-light">VoltEdge v0.1</p>
+          !collapsed && <p className="text-xs text-neutral-light">IP Ramp v0.1</p>
         )}
       </div>
     </aside>

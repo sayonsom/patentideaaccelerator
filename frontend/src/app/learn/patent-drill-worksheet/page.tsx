@@ -790,7 +790,7 @@ function CTA() {
           The platform does the rest.
         </h2>
         <p className="text-base font-light text-white/50 max-w-xl mx-auto mb-10 leading-relaxed">
-          VoltEdge combines TRIZ contradiction analysis, the three-layer drill,
+          IP Ramp combines TRIZ contradiction analysis, the three-layer drill,
           and AI-powered Alice scoring into one continuous workflow. Add prior
           art search and claim generation, and you go from trade-off to filing
           in a single tool.

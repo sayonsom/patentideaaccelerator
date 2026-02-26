@@ -3,9 +3,9 @@ import { SessionProvider } from "@/components/providers/SessionProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "VoltEdge — Discover and Monetize Patents Hiding in Your Engineering Work",
+  title: "IP Ramp — Discover and Monetize Patents Hiding in Your Engineering Work",
   description:
-    "VoltEdge finds patentable ideas buried in the work your team already does and turns them into money. AI-powered patent discovery, Alice pre-screening, and claim generation for software teams.",
+    "IP Ramp finds patentable ideas buried in the work your team already does and turns them into money. AI-powered patent discovery, Alice pre-screening, and claim generation for software teams.",
   keywords: [
     "patent discovery",
     "software patents",

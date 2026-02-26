@@ -44,7 +44,7 @@ function LoginForm() {
     <div className="w-full max-w-sm">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-serif font-bold text-ink">Welcome back</h1>
-        <p className="text-sm text-text-secondary mt-1">Sign in to your VoltEdge account</p>
+        <p className="text-sm text-text-secondary mt-1">Sign in to your IP Ramp account</p>
       </div>
 
       <form onSubmit={handleCredentialsSignIn} className="space-y-4">

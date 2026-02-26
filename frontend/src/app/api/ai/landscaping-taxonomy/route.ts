@@ -7,7 +7,7 @@ import type { TaxonomyCategory } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-const TAXONOMY_SYSTEM_PROMPT = `You are VoltEdge AI, an expert patent landscape analyst.
+const TAXONOMY_SYSTEM_PROMPT = `You are IP Ramp AI, an expert patent landscape analyst.
 
 When given a technology description, generate a taxonomy of 4-8 categories that would be used to organize a patent landscape analysis.
 

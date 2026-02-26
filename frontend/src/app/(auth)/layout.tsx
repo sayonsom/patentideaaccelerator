@@ -8,7 +8,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <Link href="/" className="flex items-center gap-2">
           <span className="text-blue-ribbon font-normal text-xl">{"\u26A1"}</span>
           <span className="font-serif font-bold text-lg text-ink">
-            VoltEdge
+            IP Ramp
           </span>
         </Link>
       </header>
@@ -20,7 +20,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       {/* Minimal footer */}
       <footer className="h-12 border-t border-border flex items-center justify-center text-xs text-neutral-light">
-        &copy; {new Date().getFullYear()} VoltEdge. All rights reserved.
+        &copy; {new Date().getFullYear()} IP Ramp. All rights reserved.
       </footer>
     </div>
   );

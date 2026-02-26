@@ -73,7 +73,7 @@ function SignupForm() {
       <div className="text-center mb-8">
         <h1 className="text-2xl font-serif font-bold text-ink">Create your account</h1>
         <p className="text-sm text-text-secondary mt-1">
-          Get started with VoltEdge — AI-powered patent ideation.
+          Get started with IP Ramp — AI-powered patent ideation.
         </p>
       </div>
 

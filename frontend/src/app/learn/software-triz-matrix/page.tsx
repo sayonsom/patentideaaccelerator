@@ -693,7 +693,7 @@ function CTA() {
           waiting to be filed.
         </h2>
         <p className="text-base font-light text-white/50 max-w-xl mx-auto mb-10 leading-relaxed">
-          VoltEdge combines the TRIZ matrix with AI-powered ideation, automatic
+          IP Ramp combines the TRIZ matrix with AI-powered ideation, automatic
           Alice scoring, and claim generation. Turn your engineering
           contradictions into defensible IP.
         </p>

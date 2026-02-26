@@ -10,7 +10,7 @@ import {
 
 export const runtime = "nodejs";
 
-const BASE_SYSTEM = `You are VoltEdge AI, analyzing patent ideas. You will be given a column prompt and idea details. Follow the prompt instructions exactly. Keep responses concise (1-2 sentences max unless the prompt says otherwise).`;
+const BASE_SYSTEM = `You are IP Ramp AI, analyzing patent ideas. You will be given a column prompt and idea details. Follow the prompt instructions exactly. Keep responses concise (1-2 sentences max unless the prompt says otherwise).`;
 
 interface ComputeRequest {
   columnId: string;

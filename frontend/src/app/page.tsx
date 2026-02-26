@@ -200,7 +200,7 @@ function StickyNav() {
         <Link href="/" className="flex items-center gap-2">
           <span className="text-blue-ribbon text-xl">{"\u26A1"}</span>
           <span className="font-serif font-bold text-xl text-ink">
-            VoltEdge
+            IP Ramp
           </span>
         </Link>
 
@@ -275,7 +275,7 @@ function Hero() {
             Now own it.
           </h1>
           <p className="text-lg md:text-xl font-light text-text-secondary max-w-2xl mx-auto mb-10 leading-relaxed">
-            VoltEdge finds patentable ideas buried in the work your team already
+            IP Ramp finds patentable ideas buried in the work your team already
             does&nbsp;&mdash; and turns them into money.
           </p>
         </FadeIn>
@@ -319,7 +319,7 @@ function ProductMockup() {
             <span className="w-3 h-3 rounded-full bg-[#28C840]" />
           </div>
           <span className="text-xs text-white/40 ml-2 font-light">
-            VoltEdge&nbsp;&mdash;&nbsp;Idea Discovery
+            IP Ramp&nbsp;&mdash;&nbsp;Idea Discovery
           </span>
         </div>
 
@@ -459,7 +459,7 @@ function ProductSuite() {
       oneLiner:
         "The trade-offs you fight daily are inventions waiting to happen.",
       description:
-        "30 software parameters. 15 inventive principles. Tell VoltEdge what you\u2019re trying to improve and what gets worse\u2009\u2014\u2009it shows you where the patent-worthy solutions live.",
+        "30 software parameters. 15 inventive principles. Tell IP Ramp what you\u2019re trying to improve and what gets worse\u2009\u2014\u2009it shows you where the patent-worthy solutions live.",
       link: "Try it live",
       screenshotHint: "Latency-vs-consistency trade-off resolved",
     },
@@ -494,7 +494,7 @@ function ProductSuite() {
       <div className="max-w-6xl mx-auto">
         <FadeIn className="text-center mb-16">
           <p className="text-xs font-medium text-blue-ribbon tracking-widest uppercase mb-4">
-            VoltEdge Platform
+            IP Ramp Platform
           </p>
           <h2 className="font-serif font-bold text-3xl md:text-4xl lg:text-5xl text-ink mb-4">
             Find it. Validate it. File it. Monetize it.
@@ -563,7 +563,7 @@ function AhaMoment() {
           href="/signup"
           className="inline-flex items-center gap-2 text-blue-ribbon hover:text-dayflower transition-colors font-light text-lg"
         >
-          See what VoltEdge finds{" "}
+          See what IP Ramp finds{" "}
           <span className="text-sm">{"\u2192"}</span>
         </Link>
       </FadeIn>
@@ -580,7 +580,7 @@ function Timeline() {
       title: "Describe what you built.",
       items: [
         "Paste an architecture decision, a design doc, or just explain what was hard",
-        "VoltEdge identifies the inventive steps you didn\u2019t notice",
+        "IP Ramp identifies the inventive steps you didn\u2019t notice",
         "First patentable concepts surface in minutes",
       ],
     },
@@ -612,7 +612,7 @@ function Timeline() {
             You don&apos;t need a patent strategy. You need five minutes.
           </p>
           <h2 className="font-serif font-bold text-3xl md:text-4xl lg:text-5xl text-ink">
-            Here&apos;s what VoltEdge surfaces in your first week.
+            Here&apos;s what IP Ramp surfaces in your first week.
           </h2>
         </FadeIn>
 
@@ -661,19 +661,19 @@ function ThreeValueProps() {
   const props = [
     {
       title: "You\u2019re inventing and not realizing it.",
-      body: "Every architectural decision, every clever optimization, every workaround that \u201Cjust worked\u201D\u2009\u2014\u2009some of those are patentable. VoltEdge scans your descriptions and flags what\u2019s novel.",
+      body: "Every architectural decision, every clever optimization, every workaround that \u201Cjust worked\u201D\u2009\u2014\u2009some of those are patentable. IP Ramp scans your descriptions and flags what\u2019s novel.",
       link: "Idea Discovery",
       screenshotHint: "Routine engineering input \u2192 patent-worthy output highlighted",
     },
     {
       title: "You\u2019re filing the wrong things.",
-      body: "60% of software patents get rejected under Alice because nobody screened them first. VoltEdge scores every idea before you spend a dollar on counsel.",
+      body: "60% of software patents get rejected under Alice because nobody screened them first. IP Ramp scores every idea before you spend a dollar on counsel.",
       link: "Alice Pre-Screener",
       screenshotHint: "High-score vs low-score idea side-by-side",
     },
     {
       title: "You\u2019re filing without knowing what they\u2019re worth.",
-      body: "A patent filing costs $15\u201325K. Some are worth millions. Some are worth nothing. VoltEdge shows you the monetization signals before you write the check.",
+      body: "A patent filing costs $15\u201325K. Some are worth millions. Some are worth nothing. IP Ramp shows you the monetization signals before you write the check.",
       link: "Monetization Signals",
       screenshotHint: "Patent value dashboard",
     },
@@ -743,11 +743,11 @@ function ScaleSection() {
   const features = [
     {
       title: "No patent expertise needed.",
-      body: "Describe what you built in plain English. VoltEdge handles the inventive analysis, the legal screening, and the claim drafting.",
+      body: "Describe what you built in plain English. IP Ramp handles the inventive analysis, the legal screening, and the claim drafting.",
     },
     {
       title: "Works with any stack.",
-      body: "Distributed systems, ML pipelines, frontend frameworks, infrastructure\u2009\u2014\u2009if your team built it, VoltEdge can analyze it.",
+      body: "Distributed systems, ML pipelines, frontend frameworks, infrastructure\u2009\u2014\u2009if your team built it, IP Ramp can analyze it.",
     },
     {
       title: "Attorney-ready exports.",
@@ -768,7 +768,7 @@ function ScaleSection() {
             wants to own it.
           </h2>
           <p className="text-lg font-light text-text-secondary max-w-2xl mx-auto">
-            Simple defaults. Deep customization. VoltEdge works however your
+            Simple defaults. Deep customization. IP Ramp works however your
             team works.
           </p>
         </FadeIn>
@@ -901,7 +901,7 @@ function Footer() {
             <Link href="/" className="flex items-center gap-2 mb-4">
               <span className="text-blue-ribbon text-xl">{"\u26A1"}</span>
               <span className="font-serif font-bold text-lg text-ink">
-                VoltEdge
+                IP Ramp
               </span>
             </Link>
             <p className="text-sm font-light text-neutral-light leading-relaxed max-w-xs">
@@ -938,7 +938,7 @@ function Footer() {
         {/* Bottom bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8 border-t border-border">
           <span className="text-xs font-light text-neutral-light">
-            &copy; 2026 VoltEdge
+            &copy; 2026 IP Ramp
           </span>
           <div className="flex items-center gap-6">
             <a

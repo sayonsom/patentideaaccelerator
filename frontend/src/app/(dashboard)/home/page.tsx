@@ -138,7 +138,7 @@ export default function HomePage() {
   const [followedIds, setFollowedIds] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set<string>();
     try {
-      const stored = localStorage.getItem("voltedge:followed-companies");
+      const stored = localStorage.getItem("ipramp:followed-companies");
       return stored ? new Set(JSON.parse(stored)) : new Set<string>();
     } catch {
       return new Set<string>();
@@ -154,7 +154,7 @@ export default function HomePage() {
         next.add(companyId);
       }
       localStorage.setItem(
-        "voltedge:followed-companies",
+        "ipramp:followed-companies",
         JSON.stringify([...next])
       );
       return next;
