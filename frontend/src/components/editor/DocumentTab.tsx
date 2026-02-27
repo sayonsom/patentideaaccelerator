@@ -20,10 +20,6 @@ interface TiptapNode {
   content?: TiptapNode[];
 }
 
-function textNode(text: string): TiptapNode {
-  return { type: "text", content: undefined, attrs: undefined } as unknown as TiptapNode & { text: string };
-}
-
 /** Create a raw text node compatible with Tiptap JSON schema. */
 function makeText(text: string): { type: "text"; text: string } {
   return { type: "text", text };
@@ -50,17 +46,6 @@ function numberedParagraph(text: string): TiptapNode {
   return {
     type: "patentParagraph",
     attrs: { paragraphNumber: paragraphCounter },
-    content: [makeText(text) as unknown as TiptapNode],
-  };
-}
-
-function plainParagraph(text: string): TiptapNode {
-  if (!text.trim()) {
-    return { type: "patentParagraph", attrs: { paragraphNumber: null } };
-  }
-  return {
-    type: "patentParagraph",
-    attrs: { paragraphNumber: null },
     content: [makeText(text) as unknown as TiptapNode],
   };
 }

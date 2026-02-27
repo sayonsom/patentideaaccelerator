@@ -96,30 +96,6 @@ async function requireDocumentAccessForComments(documentId: string) {
 }
 
 /**
- * Verify the current user owns a specific comment (for mutations).
- *
- * @throws NotFoundError if the comment does not exist.
- * @throws ForbiddenError if the user does not own the comment.
- */
-async function requireCommentOwner(commentId: string) {
-  const { userId } = await requireSession();
-
-  const comment = await prisma.documentComment.findUnique({
-    where: { id: commentId },
-  });
-
-  if (!comment) {
-    throw new NotFoundError("Document comment");
-  }
-
-  if (comment.userId !== userId) {
-    throw new ForbiddenError("document comment");
-  }
-
-  return { userId, comment };
-}
-
-/**
  * Verify the current user can manage a comment (resolve/unresolve/delete).
  * A user can manage a comment if they own the comment OR own the document.
  *
