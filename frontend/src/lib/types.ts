@@ -848,3 +848,67 @@ export const MAGIC_COLUMN_PRESETS = [
   { name: "Competitive Moat", prompt: "Assess the competitive moat strength of this patent idea on a scale of 1-5. Consider: how easy it would be for competitors to design around, breadth of coverage, and strategic value. Respond with just the rating number and a one-sentence explanation." },
   { name: "Implementation Complexity", prompt: "Rate the implementation complexity of this patent idea on a scale of 1-5 (1=simple, 5=very complex). Consider: engineering effort, infrastructure requirements, and technical dependencies. Respond with just the rating number and a one-sentence explanation." },
 ] as const;
+
+// ═══════════════════════════════════════════════════════════════════
+// Patent Document Editor Types
+// ═══════════════════════════════════════════════════════════════════
+
+export type DocumentStatus = "draft" | "in_review" | "finalized";
+export type VersionTrigger = "manual" | "auto" | "stage_change" | "ai_generation";
+export type CommentSource = "user" | "ai_suggestion";
+export type ImageSourceType = "upload" | "generated" | "sketch_converted";
+
+export interface PatentDocument {
+  id: string;
+  ideaId: string;
+  userId: string;
+  title: string;
+  content: Record<string, unknown>;  // Tiptap JSON
+  status: DocumentStatus;
+  paragraphCounter: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentVersion {
+  id: string;
+  documentId: string;
+  versionNum: number;
+  content: Record<string, unknown>;  // Tiptap JSON snapshot
+  label: string;
+  trigger: VersionTrigger;
+  createdAt: string;
+}
+
+export interface DocumentComment {
+  id: string;
+  documentId: string;
+  userId: string;
+  content: string;
+  anchorFrom: number | null;
+  anchorTo: number | null;
+  anchorText: string | null;
+  parentId: string | null;
+  resolved: boolean;
+  source: CommentSource;
+  createdAt: string;
+  updatedAt: string;
+  user?: Pick<User, "id" | "name" | "email">;
+  replies?: DocumentComment[];
+}
+
+export interface DocumentImage {
+  id: string;
+  documentId: string;
+  userId: string;
+  filename: string;
+  s3Key: string;
+  mimeType: string;
+  sizeBytes: number;
+  figureNum: number | null;
+  caption: string;
+  sourceType: ImageSourceType;
+  generationMeta: Record<string, unknown> | null;
+  createdAt: string;
+  url?: string;  // computed from s3Key
+}

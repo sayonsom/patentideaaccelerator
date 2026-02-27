@@ -18,6 +18,7 @@ model User {
   email              String   @unique
   name               String
   cognitoSub         String?  @unique @map("cognito_sub")
+  passwordHash       String?  @map("password_hash")
   interests          Json     @default("[]")
   accountType        String   @default("personal") @map("account_type") // "personal" | "corporate"
   onboardingComplete Boolean  @default(false) @map("onboarding_complete")
@@ -40,6 +41,9 @@ model User {
   portfolios         Portfolio[]
   landscapingSessions LandscapingSession[]
   magicColumns       MagicColumn[]
+  patentDocuments    PatentDocument[]
+  documentComments   DocumentComment[]
+  documentImages     DocumentImage[]
 
   @@map("users")
 }
@@ -221,6 +225,7 @@ model Idea {
   continuationResults   ContinuationResult[]
   promotedContinuations ContinuationResult[] @relation("PromotedIdea")
   magicColumnValues     MagicColumnValue[]
+  patentDocument        PatentDocument?
 
   @@map("ideas")
 }
@@ -460,4 +465,93 @@ model ChatHistory {
 
   @@index([userId, contextType, contextId])
   @@map("chat_histories")
+}
+
+// ─── Patent Documents (Google Docs-like editor) ─────────────────
+
+model PatentDocument {
+  id               String   @id @default(uuid())
+  ideaId           String   @unique @map("idea_id")
+  userId           String   @map("user_id")
+  title            String   @default("")
+  content          Json     @default("{}") @db.JsonB  // Tiptap JSON document
+  status           String   @default("draft")          // "draft" | "in_review" | "finalized"
+  paragraphCounter Int      @default(0) @map("paragraph_counter")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  idea     Idea              @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions DocumentVersion[]
+  comments DocumentComment[]
+  images   DocumentImage[]
+
+  @@index([userId])
+  @@map("patent_documents")
+}
+
+// ─── Document Versions (snapshot-based version control) ──────────
+
+model DocumentVersion {
+  id         String   @id @default(uuid())
+  documentId String   @map("document_id")
+  versionNum Int      @map("version_num")
+  content    Json     @db.JsonB                  // Tiptap JSON snapshot
+  label      String   @default("")               // e.g., "Auto-save", "Stage: developing"
+  trigger    String   @default("manual")         // "manual" | "auto" | "stage_change" | "ai_generation"
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  document PatentDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, versionNum])
+  @@index([documentId])
+  @@map("document_versions")
+}
+
+// ─── Document Comments (inline annotations) ──────────────────────
+
+model DocumentComment {
+  id         String    @id @default(uuid())
+  documentId String    @map("document_id")
+  userId     String    @map("user_id")
+  content    String                              // comment text (markdown)
+  anchorFrom Int?      @map("anchor_from")       // ProseMirror position start
+  anchorTo   Int?      @map("anchor_to")         // ProseMirror position end
+  anchorText String?   @map("anchor_text")       // highlighted text snapshot
+  parentId   String?   @map("parent_id")         // for threaded replies
+  resolved   Boolean   @default(false)
+  source     String    @default("user")          // "user" | "ai_suggestion"
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  document PatentDocument   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   DocumentComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies  DocumentComment[] @relation("CommentReplies")
+
+  @@index([documentId])
+  @@map("document_comments")
+}
+
+// ─── Document Images (figures for patent drawings) ───────────────
+
+model DocumentImage {
+  id             String   @id @default(uuid())
+  documentId     String   @map("document_id")
+  userId         String   @map("user_id")
+  filename       String
+  s3Key          String   @map("s3_key")
+  mimeType       String   @map("mime_type")
+  sizeBytes      Int      @map("size_bytes")
+  figureNum      Int?     @map("figure_num")
+  caption        String   @default("")
+  sourceType     String   @default("upload") @map("source_type") // "upload" | "generated" | "sketch_converted"
+  generationMeta Json?    @map("generation_meta") @db.JsonB
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  document PatentDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("document_images")
 }

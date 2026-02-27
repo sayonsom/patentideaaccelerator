@@ -132,3 +132,245 @@
     font-family: var(--font-sans);
   }
 }
+
+/* ─── Patent Document Editor (Tiptap / ProseMirror) ─────────── */
+
+.patent-editor-content .ProseMirror {
+  outline: none;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.75;
+  color: #111827;
+  min-height: 100%;
+}
+
+.patent-editor-content .ProseMirror p {
+  margin-bottom: 0.5em;
+}
+
+.patent-editor-content .ProseMirror h1 {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  color: #111827;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.patent-editor-content .ProseMirror h2 {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+  color: #111827;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+
+.patent-editor-content .ProseMirror h3 {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: #111827;
+}
+
+/* ─── Patent Paragraph Numbering ─────────────────────────────── */
+
+.patent-editor-content .ProseMirror .patent-paragraph {
+  position: relative;
+  padding-left: 4rem;
+  margin-bottom: 0.75em;
+}
+
+.patent-editor-content .ProseMirror .patent-paragraph::before {
+  content: "[" attr(data-paragraph-number) "]";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #9CA3AF;
+  font-size: 0.8em;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  width: 3.5rem;
+  text-align: right;
+}
+
+/* ─── Patent Claim Blocks ────────────────────────────────────── */
+
+.patent-editor-content .ProseMirror .patent-claim {
+  position: relative;
+  padding: 0.5rem 0 0.5rem 2rem;
+  margin-bottom: 0.5em;
+  border-left: 2px solid #E5E7EB;
+}
+
+.patent-editor-content .ProseMirror .patent-claim::before {
+  content: attr(data-claim-number) ".";
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  font-weight: 600;
+  color: #4B5563;
+  width: 1.5rem;
+  text-align: right;
+}
+
+.patent-editor-content .ProseMirror .patent-claim--dependent {
+  margin-left: 2rem;
+  border-left-color: #D1D5DB;
+}
+
+/* ─── Comment Highlights ─────────────────────────────────────── */
+
+.patent-editor-content .ProseMirror .comment-highlight {
+  background-color: #FEF3C7;
+  border-bottom: 2px solid #F59E0B;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.patent-editor-content .ProseMirror .comment-highlight:hover {
+  background-color: #FDE68A;
+}
+
+/* ─── Patent Figures ─────────────────────────────────────────── */
+
+.patent-editor-content .ProseMirror .patent-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 2rem 0;
+  padding: 1rem;
+  border: 1px solid #E5E7EB;
+  border-radius: 0.375rem;
+  background: #F9FAFB;
+}
+
+.patent-editor-content .ProseMirror .patent-figure img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #D1D5DB;
+}
+
+.patent-editor-content .ProseMirror .patent-figure figcaption {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  text-align: center;
+}
+
+/* ─── Figure References (inline) ─────────────────────────────── */
+
+.patent-editor-content .ProseMirror .figure-ref {
+  font-weight: 600;
+  color: #2251FF;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.patent-editor-content .ProseMirror .figure-ref:hover {
+  text-decoration: underline;
+}
+
+/* ─── Tables ─────────────────────────────────────────────────── */
+
+.patent-editor-content .ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.patent-editor-content .ProseMirror th,
+.patent-editor-content .ProseMirror td {
+  border: 1px solid #D1D5DB;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  font-size: 0.875rem;
+}
+
+.patent-editor-content .ProseMirror th {
+  background: #F3F4F6;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* ─── Code Blocks ────────────────────────────────────────────── */
+
+.patent-editor-content .ProseMirror pre {
+  background: #1F2937;
+  color: #E5E7EB;
+  border-radius: 0.375rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.patent-editor-content .ProseMirror code {
+  background: #F3F4F6;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+.patent-editor-content .ProseMirror pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* ─── Lists ──────────────────────────────────────────────────── */
+
+.patent-editor-content .ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.patent-editor-content .ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.patent-editor-content .ProseMirror li {
+  margin-bottom: 0.25rem;
+}
+
+/* ─── Horizontal Rule ────────────────────────────────────────── */
+
+.patent-editor-content .ProseMirror hr {
+  border: none;
+  border-top: 1px solid #D1D5DB;
+  margin: 1.5rem 0;
+}
+
+/* ─── Placeholder ────────────────────────────────────────────── */
+
+.patent-editor-content .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9CA3AF;
+  pointer-events: none;
+  height: 0;
+}
+
+/* ─── Selection & Focus States ───────────────────────────────── */
+
+.patent-editor-content .ProseMirror ::selection {
+  background: rgba(34, 81, 255, 0.15);
+}
+
+.patent-editor-content .ProseMirror .selectedCell {
+  background: rgba(34, 81, 255, 0.08);
+}

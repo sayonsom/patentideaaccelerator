@@ -24,6 +24,7 @@ import { SITWorksheet } from "@/components/frameworks/SITWorksheet";
 import { CKWorksheet } from "@/components/frameworks/CKWorksheet";
 import { FMEAInversion } from "@/components/frameworks/FMEAInversion";
 import { ContinuationPanel } from "./ContinuationPanel";
+import { DocumentTab } from "@/components/editor/DocumentTab";
 import { getStatusColor, getTotalScore, getScoreVerdict, timeAgo, getAliceRiskColor } from "@/lib/utils";
 
 interface IdeaDetailProps {
@@ -42,6 +43,7 @@ const BASE_DETAIL_TABS = [
   { id: "overview", label: "Overview" },
   { id: "framework", label: "Framework" },
   { id: "claims", label: "Claims" },
+  { id: "document", label: "Document" },
   { id: "patent-filing", label: "Patent Filing" },
   { id: "red-team", label: "Red Team" },
   { id: "prior-art", label: "Prior Art" },
@@ -158,6 +160,9 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
           </TabPanel>
           <TabPanel id="red-team" activeTab={activeTab}>
             <RedTeamTab idea={idea} update={update} editing={editing} />
+          </TabPanel>
+          <TabPanel id="document" activeTab={activeTab}>
+            <DocumentTab idea={idea} />
           </TabPanel>
           <TabPanel id="prior-art" activeTab={activeTab}>
             <PriorArtTab idea={idea} update={update} />
