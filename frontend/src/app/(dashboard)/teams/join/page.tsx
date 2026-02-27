@@ -2,15 +2,15 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { redeemTeamInvite } from "@/lib/actions/teams-management";
 import { redeemOrgInvite } from "@/lib/actions/organizations";
 import { Button, Input, Card, Spinner } from "@/components/ui";
+import { refreshSessionWithRetry } from "@/lib/session-refresh";
 
 function JoinTeamForm() {
-  const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const searchParams = useSearchParams();
   const codeFromUrl = searchParams.get("code") ?? "";
 
@@ -36,13 +36,21 @@ function JoinTeamForm() {
       // Try team invite first
       const teamResult = await redeemTeamInvite(code, session.user.id);
       if (teamResult.success && teamResult.teamId) {
-        router.push(`/teams/${teamResult.teamId}`);
+        await refreshSessionWithRetry(
+          updateSession,
+          (nextSession) => nextSession.user.teamIds.includes(teamResult.teamId!)
+        );
+        window.location.assign(`/teams/${teamResult.teamId}`);
         return;
       }
 
       // Fall back to org invite
       const orgResult = await redeemOrgInvite(code, session.user.id);
       if (orgResult.success) {
+        await refreshSessionWithRetry(
+          updateSession,
+          (nextSession) => Boolean(nextSession.user.orgId)
+        );
         setSuccess(true);
       } else {
         setError("Invalid or expired invite code. Please check and try again.");

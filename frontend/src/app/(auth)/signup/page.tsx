@@ -1,16 +1,21 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { getSafeCallbackPath } from "@/lib/navigation";
 
 function SignupForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "";
+  const callbackUrl = getSafeCallbackPath(searchParams.get("callbackUrl"), "");
+  const defaultEmail = useMemo(
+    () => searchParams.get("email")?.trim() ?? "",
+    [searchParams]
+  );
 
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(defaultEmail);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -32,9 +37,23 @@ function SignupForm() {
     return onboardingUrl;
   }
 
+  function getAuthErrorMessage(errorCode?: string) {
+    if (!errorCode) return "Sign-up failed. Please try again.";
+    if (errorCode.includes("already exists")) {
+      return "An account with this email already exists. Please sign in.";
+    }
+    if (errorCode.includes("Single Sign-On")) {
+      return "This email is already linked to Single Sign-On.";
+    }
+    if (errorCode.includes("Password")) {
+      return errorCode;
+    }
+    return "Sign-up failed. Please try again.";
+  }
+
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !name.trim()) return;
+    if (!email.trim() || !name.trim() || !password) return;
     setLoading(true);
     setError("");
 
@@ -42,14 +61,16 @@ function SignupForm() {
       email: email.trim(),
       password,
       name: name.trim(),
+      mode: "signup",
       redirect: false,
+      callbackUrl: getOnboardingUrl(),
     });
 
     if (res?.error) {
-      setError("Sign-up failed. Please try again.");
+      setError(getAuthErrorMessage(res.error));
       setLoading(false);
     } else {
-      window.location.href = getOnboardingUrl();
+      window.location.assign(getOnboardingUrl());
     }
   }
 
@@ -126,8 +147,13 @@ function SignupForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Choose a password"
+            required
+            minLength={8}
             className="w-full px-3 py-2 rounded-md bg-white border border-border text-ink text-sm placeholder:text-neutral-light focus:outline-none focus:ring-1 focus:ring-blue-ribbon focus:border-blue-ribbon transition-colors"
           />
+          <p className="text-[11px] text-neutral-light mt-1">
+            Must be at least 8 characters.
+          </p>
         </div>
 
         {error && (
@@ -136,7 +162,7 @@ function SignupForm() {
 
         <button
           type="submit"
-          disabled={loading || !email.trim() || !name.trim()}
+          disabled={loading || !email.trim() || !name.trim() || password.length < 8}
           className="w-full py-2.5 rounded-md bg-blue-ribbon text-white font-normal text-sm hover:bg-accent-hover transition-colors disabled:opacity-60"
         >
           {loading ? "Creating account..." : "Create Account"}

@@ -92,10 +92,13 @@ export default function SettingsPage() {
   // Load infrastructure preferences
   useEffect(() => {
     if (!userId) return;
-    getInfraPreferences(userId).then((prefs) => {
-      if (prefs) setInfraPrefs(prefs);
-      setInfraLoaded(true);
-    });
+    getInfraPreferences(userId)
+      .then((prefs) => {
+        if (prefs) setInfraPrefs(prefs);
+      })
+      .finally(() => {
+        setInfraLoaded(true);
+      });
   }, [userId]);
 
   function handleInfraChange(updates: Partial<InfraPreferences>) {
@@ -105,7 +108,13 @@ export default function SettingsPage() {
     infraSaveTimer.current = setTimeout(async () => {
       if (!userId) return;
       setInfraSaving(true);
-      await updateInfraPreferences(userId, next);
+      try {
+        await updateInfraPreferences(userId, next);
+      } catch {
+        toast("Failed to save infrastructure preferences.");
+        setInfraSaving(false);
+        return;
+      }
       setInfraSaving(false);
       toast("Infrastructure preferences saved.");
     }, 600);

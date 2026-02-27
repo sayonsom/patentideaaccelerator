@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Spinner, EmptyState } from "@/components/ui";
 import { LandscapingWizard } from "@/components/landscaping/LandscapingWizard";
@@ -18,15 +19,22 @@ export default function LandscapingPage() {
 
   const [sessions, setSessions] = useState<LandscapingSession[]>([]);
   const [activeSession, setActiveSession] = useState<LandscapingSession | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
 
   useEffect(() => {
-    if (userId) loadSessions();
+    if (status === "loading") return;
+    if (status !== "authenticated" || !userId) {
+      setSessions([]);
+      setActiveSession(null);
+      setLoading(false);
+      return;
+    }
+    loadSessions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [status, userId]);
 
   const loadSessions = async () => {
     if (!userId) return;
@@ -65,10 +73,22 @@ export default function LandscapingPage() {
     }
   };
 
-  if (status === "loading" || loading) {
+  if (status === "loading" || (status === "authenticated" && loading)) {
     return (
       <div className="flex items-center justify-center py-24">
         <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return (
+      <div className="flex flex-col items-center justify-center py-24">
+        <h2 className="text-lg font-medium text-ink mb-2">Session expired</h2>
+        <p className="text-sm text-text-muted mb-4">Please sign in again to continue.</p>
+        <Link href="/login?callbackUrl=%2Flandscaping" className="text-sm text-blue-ribbon hover:underline">
+          Go to Login
+        </Link>
       </div>
     );
   }

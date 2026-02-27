@@ -3,6 +3,11 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import CognitoProvider from "next-auth/providers/cognito";
 import { prisma } from "@/lib/prisma";
 import type { OrgRole } from "@/lib/types";
+import {
+  hashPassword,
+  validatePasswordPolicy,
+  verifyPassword,
+} from "@/lib/password";
 
 // ─── Personal email domains (not corporate) ────────────────────
 const PERSONAL_DOMAINS = new Set([
@@ -99,7 +104,7 @@ if (
   );
 }
 
-// Credentials — email + password sign-in (auto-creates user if needed)
+// Credentials — email + password auth
 providers.push(
   CredentialsProvider({
     name: "Email",
@@ -107,30 +112,69 @@ providers.push(
       email: { label: "Email", type: "email", placeholder: "you@company.com" },
       password: { label: "Password", type: "password" },
       name: { label: "Name", type: "text", placeholder: "Your name" },
+      mode: { label: "Mode", type: "text" }, // "signup" | "login"
     },
     async authorize(credentials) {
       if (!credentials?.email) return null;
 
       const email = credentials.email.trim().toLowerCase();
-      const name =
-        credentials.name?.trim() || email.split("@")[0];
+      const password = credentials.password ?? "";
+      const mode = credentials.mode === "signup" ? "signup" : "login";
+      const name = credentials.name?.trim() || email.split("@")[0];
       const accountType = isPersonalEmail(email) ? "personal" : "corporate";
+      if (!password) {
+        throw new Error("Password is required.");
+      }
 
-      // Look up or create user by email
-      let user = await prisma.user.findUnique({ where: { email } });
+      // Explicit signup path — creates local password auth user.
+      if (mode === "signup") {
+        const policyError = validatePasswordPolicy(password);
+        if (policyError) throw new Error(policyError);
 
-      if (!user) {
-        user = await prisma.user.create({
+        const existing = await prisma.user.findUnique({
+          where: { email },
+          select: { id: true, passwordHash: true, cognitoSub: true },
+        });
+
+        if (existing?.passwordHash) {
+          throw new Error("An account with this email already exists.");
+        }
+        if (existing?.cognitoSub) {
+          throw new Error("This account uses Single Sign-On.");
+        }
+        if (existing) {
+          throw new Error("An account with this email already exists.");
+        }
+
+        const passwordHash = await hashPassword(password);
+        const user = await prisma.user.create({
           data: {
             email,
             name,
+            passwordHash,
             interests: [],
             accountType,
             onboardingComplete: false,
           },
         });
+        return { id: user.id, email: user.email, name: user.name };
       }
 
+      // Login path — verifies existing local password hash.
+      const user = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true, email: true, name: true, passwordHash: true },
+      });
+      if (!user) {
+        throw new Error("Invalid email or password.");
+      }
+      if (!user.passwordHash) {
+        throw new Error("This account uses Single Sign-On.");
+      }
+      const passwordOk = await verifyPassword(password, user.passwordHash);
+      if (!passwordOk) {
+        throw new Error("Invalid email or password.");
+      }
       return { id: user.id, email: user.email, name: user.name };
     },
   })
@@ -148,27 +192,41 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    /**
-     * On sign-in, upsert user in the database.
-     * Cognito's `profile.sub` is the stable identifier.
-     * Credentials provider already handles upsert in authorize().
-     */
+    /** On sign-in, reconcile OAuth identities with existing users. */
     async signIn({ user, account }) {
       if (!account || !user.email) return true;
 
-      // Credentials provider — user already created in authorize()
+      // Credentials provider — user handled in authorize()
       if (account.provider === "credentials") return true;
 
       // OAuth providers (Cognito)
       const sub = account.providerAccountId;
       const accountType = isPersonalEmail(user.email) ? "personal" : "corporate";
-
-      const existing = await prisma.user.findUnique({
+      const existingBySub = await prisma.user.findUnique({
         where: { cognitoSub: sub },
       });
 
-      if (!existing) {
-        await prisma.user.create({
+      if (existingBySub) return true;
+
+      const existingByEmail = await prisma.user.findUnique({
+        where: { email: user.email },
+        select: { id: true, cognitoSub: true },
+      });
+
+      if (existingByEmail) {
+        // If this email is already linked to another IdP subject, reject linkage.
+        if (existingByEmail.cognitoSub && existingByEmail.cognitoSub !== sub) {
+          return false;
+        }
+        await prisma.user.update({
+          where: { id: existingByEmail.id },
+          data: { cognitoSub: sub, accountType },
+        });
+        invalidateRbacCache(existingByEmail.id);
+        return true;
+      }
+
+      await prisma.user.create({
           data: {
             email: user.email,
             name: user.name ?? user.email.split("@")[0],
@@ -177,8 +235,7 @@ export const authOptions: NextAuthOptions = {
             accountType,
             onboardingComplete: false,
           },
-        });
-      }
+      });
 
       return true;
     },

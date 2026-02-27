@@ -8,6 +8,7 @@ import { INTEREST_CATEGORIES, ALL_INTERESTS } from "@/lib/constants";
 import { completeOnboarding, acceptTerms } from "@/lib/actions/users";
 import { redeemTeamInvite } from "@/lib/actions/teams-management";
 import { redeemOrgInvite } from "@/lib/actions/organizations";
+import { refreshSessionWithRetry } from "@/lib/session-refresh";
 
 // ─── Step indicator ──────────────────────────────────────────────
 
@@ -203,12 +204,19 @@ function OnboardingContent() {
     setSaving(true);
     setError(null);
     try {
-      await acceptTerms(session.user.id);
+      const accepted = await acceptTerms(session.user.id);
+      if (!accepted) {
+        throw new Error("Failed to save terms acceptance.");
+      }
       setSaving(false);
       setStep(2);
-    } catch {
+    } catch (err) {
       setSaving(false);
-      setError("Failed to save. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to save. Please try again."
+      );
     }
   }
 
@@ -234,14 +242,22 @@ function OnboardingContent() {
         try {
           const teamResult = await redeemTeamInvite(inviteFromUrl, session.user.id);
           if (teamResult.success && teamResult.teamId) {
-            await updateSession();
-            window.location.href = `/teams/${teamResult.teamId}`;
+            await refreshSessionWithRetry(
+              updateSession,
+              (nextSession) =>
+                Boolean(nextSession.user.onboardingComplete) &&
+                nextSession.user.teamIds.includes(teamResult.teamId!)
+            );
+            window.location.assign(`/teams/${teamResult.teamId}`);
             return;
           }
           const orgResult = await redeemOrgInvite(inviteFromUrl, session.user.id);
           if (orgResult.success) {
-            await updateSession();
-            window.location.href = "/teams";
+            await refreshSessionWithRetry(
+              updateSession,
+              (nextSession) => Boolean(nextSession.user.onboardingComplete)
+            );
+            window.location.assign("/teams");
             return;
           }
         } catch {
@@ -253,8 +269,16 @@ function OnboardingContent() {
       // router.push() uses client-side navigation which can race with
       // the cookie update from updateSession(), causing middleware to
       // still see the old onboardingComplete=false JWT.
-      await updateSession();
-      window.location.href = destination;
+      const refreshed = await refreshSessionWithRetry(
+        updateSession,
+        (nextSession) => Boolean(nextSession.user.onboardingComplete)
+      );
+      if (!refreshed) {
+        throw new Error(
+          "We saved your onboarding, but your session is still syncing. Please try again in a moment."
+        );
+      }
+      window.location.assign(destination);
     } catch (err) {
       setSaving(false);
       setError(

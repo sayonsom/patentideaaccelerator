@@ -4,10 +4,11 @@ import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { getSafeCallbackPath } from "@/lib/navigation";
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/home";
+  const callbackUrl = getSafeCallbackPath(searchParams.get("callbackUrl"), "/home");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,23 +16,39 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  function getAuthErrorMessage(errorCode?: string) {
+    if (!errorCode) return "Sign-in failed. Please check your credentials and try again.";
+    if (errorCode.includes("Single Sign-On")) {
+      return "This account uses Single Sign-On. Please use the SSO button.";
+    }
+    if (errorCode.includes("Invalid email or password")) {
+      return "Invalid email or password.";
+    }
+    if (errorCode.includes("Password")) {
+      return errorCode;
+    }
+    return "Sign-in failed. Please check your credentials and try again.";
+  }
+
   async function handleCredentialsSignIn(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !password) return;
     setLoading(true);
     setError("");
 
     const res = await signIn("credentials", {
       email: email.trim(),
       password,
+      mode: "login",
       redirect: false,
+      callbackUrl,
     });
 
     if (res?.error) {
-      setError("Sign-in failed. Please check your email and try again.");
+      setError(getAuthErrorMessage(res.error));
       setLoading(false);
     } else {
-      window.location.href = callbackUrl;
+      window.location.assign(callbackUrl);
     }
   }
 
@@ -82,6 +99,8 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
+              required
+              minLength={8}
               className="w-full px-3 py-2 pr-10 rounded-md bg-white border border-border text-ink text-sm placeholder:text-neutral-light focus:outline-none focus:ring-1 focus:ring-blue-ribbon focus:border-blue-ribbon transition-colors"
             />
             <button
@@ -111,7 +130,7 @@ function LoginForm() {
 
         <button
           type="submit"
-          disabled={loading || !email.trim()}
+          disabled={loading || !email.trim() || !password}
           className="w-full py-2.5 rounded-md bg-blue-ribbon text-white font-normal text-sm hover:bg-accent-hover transition-colors disabled:opacity-60"
         >
           {loading ? "Signing in..." : "Sign in"}

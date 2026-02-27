@@ -303,7 +303,15 @@ export function Sidebar() {
             )}
             {!collapsed && (
               <button
-                onClick={() => signOut({ callbackUrl: "/" })}
+                onClick={async () => {
+                  try {
+                    await signOut({ redirect: false, callbackUrl: "/" });
+                  } finally {
+                    if (typeof window !== "undefined") {
+                      window.location.assign("/");
+                    }
+                  }
+                }}
                 className="p-1 rounded text-neutral-light hover:text-danger hover:bg-red-50 transition-colors shrink-0"
                 title="Sign out"
               >

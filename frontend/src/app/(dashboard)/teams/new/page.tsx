@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { createTeam } from "@/lib/actions/teams-management";
 import { Button, Input, Card } from "@/components/ui";
+import { refreshSessionWithRetry } from "@/lib/session-refresh";
 
 export default function NewTeamPage() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
 
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,7 +28,11 @@ export default function NewTeamPage() {
         orgId: session.user.orgId ?? undefined,
         creatorId: session.user.id,
       });
-      router.push(`/teams/${newTeam.id}`);
+      await refreshSessionWithRetry(
+        updateSession,
+        (nextSession) => nextSession.user.teamIds.includes(newTeam.id)
+      );
+      window.location.assign(`/teams/${newTeam.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create team. Please try again.");
       setLoading(false);

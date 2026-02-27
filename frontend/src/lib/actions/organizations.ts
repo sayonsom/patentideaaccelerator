@@ -1,6 +1,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { invalidateRbacCache } from "@/lib/auth";
+import { ForbiddenError, requireSession } from "@/lib/actions/authorization";
 import type {
   Organization,
   OrgMember,
@@ -213,6 +215,11 @@ export async function redeemOrgInvite(
   code: string,
   userId: string
 ): Promise<{ success: boolean; orgId?: string }> {
+  const { userId: callerUserId } = await requireSession();
+  if (callerUserId !== userId) {
+    throw new ForbiddenError("invite");
+  }
+
   const invite = await prisma.orgInvite.findUnique({ where: { code } });
 
   if (!invite) {
@@ -241,6 +248,8 @@ export async function redeemOrgInvite(
       data: { used: true },
     }),
   ]);
+
+  invalidateRbacCache(userId);
 
   return { success: true, orgId: invite.orgId };
 }

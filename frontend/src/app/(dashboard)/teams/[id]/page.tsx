@@ -20,7 +20,7 @@ export default function TeamDashboardPage() {
   const [team, setTeam] = useState<IPRampTeam | null>(null);
   const [members, setMembers] = useState<TeamMemberRecord[]>([]);
   const [admin, setAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("members");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -34,25 +34,13 @@ export default function TeamDashboardPage() {
   const [teamSprints, setTeamSprints] = useState<Sprint[]>([]);
   const [sprintsLoading, setSprintsLoading] = useState(false);
 
-  // ─── Client-side membership pre-check (fast UX gate) ─────────
-  // Uses teamIds[] from the JWT session to redirect immediately if
-  // the user is not a member, avoiding a round-trip to the server.
-  // NOTE: The real security boundary is in the server actions.
   const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
-    if (status !== "loading" && session?.user) {
-      const isMember = session.user.teamIds?.includes(teamId);
-      if (!isMember) {
-        setAccessDenied(true);
-        setLoading(false);
-        return;
-      }
+    if (status !== "authenticated" || !session?.user?.id || !teamId || accessDenied) {
+      setLoading(false);
+      return;
     }
-  }, [status, session?.user, teamId]);
-
-  useEffect(() => {
-    if (!session?.user?.id || !teamId || accessDenied) return;
 
     async function loadData() {
       setLoading(true);
@@ -76,7 +64,7 @@ export default function TeamDashboardPage() {
 
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id, teamId, accessDenied]);
+  }, [status, session?.user?.id, teamId, accessDenied]);
 
   async function loadInvites() {
     setInvitesLoading(true);
@@ -140,10 +128,22 @@ export default function TeamDashboardPage() {
     }
   }
 
-  if (status === "loading" || loading) {
+  if (status === "loading" || (status === "authenticated" && loading)) {
     return (
       <div className="flex items-center justify-center py-24">
         <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return (
+      <div className="flex flex-col items-center justify-center py-24">
+        <h2 className="text-lg font-medium text-ink mb-2">Session expired</h2>
+        <p className="text-sm text-text-muted mb-4">Please sign in again to continue.</p>
+        <Link href={`/login?callbackUrl=${encodeURIComponent(`/teams/${teamId}`)}`}>
+          <Button variant="primary" size="sm">Go to Login</Button>
+        </Link>
       </div>
     );
   }

@@ -15,31 +15,48 @@ interface IPRampTeam {
 export default function TeamsPage() {
   const { data: session, status } = useSession();
   const [teams, setTeams] = useState<IPRampTeam[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const isOrgAdmin =
     session?.user?.orgRole === "business_admin" ||
     session?.user?.orgRole === "team_admin";
 
   useEffect(() => {
-    if (session?.user?.id) {
-      setLoading(true);
-      const fetcher =
-        isOrgAdmin && session.user.orgId
-          ? listTeamsForOrg(session.user.orgId)
-          : listTeamsForUser(session.user.id);
-      fetcher
-        .then((data) => setTeams(data))
-        .catch(() => setTeams([]))
-        .finally(() => setLoading(false));
+    if (status === "loading") return;
+    if (status !== "authenticated" || !session?.user?.id) {
+      setTeams([]);
+      setLoading(false);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id, session?.user?.orgId, session?.user?.orgRole]);
 
-  if (status === "loading" || loading) {
+    setLoading(true);
+    const fetcher =
+      isOrgAdmin && session.user.orgId
+        ? listTeamsForOrg(session.user.orgId)
+        : listTeamsForUser(session.user.id);
+    fetcher
+      .then((data) => setTeams(data))
+      .catch(() => setTeams([]))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, session?.user?.id, session?.user?.orgId, session?.user?.orgRole]);
+
+  if (status === "loading" || (status === "authenticated" && loading)) {
     return (
       <div className="flex items-center justify-center py-24">
         <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return (
+      <div className="flex flex-col items-center justify-center py-24">
+        <h2 className="text-lg font-medium text-ink mb-2">Session expired</h2>
+        <p className="text-sm text-text-muted mb-4">Please sign in again to continue.</p>
+        <Link href="/login?callbackUrl=%2Fteams">
+          <Button variant="primary" size="sm">Go to Login</Button>
+        </Link>
       </div>
     );
   }

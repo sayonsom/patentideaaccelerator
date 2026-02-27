@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { invalidateRbacCache } from "@/lib/auth";
 import type { User, InfraPreferences } from "@/lib/types";
 import type { User as PrismaUser } from "@prisma/client";
+import { ForbiddenError, requireSession } from "@/lib/actions/authorization";
 
 // ─── Mapper ─────────────────────────────────────────────────────
 
@@ -64,6 +65,11 @@ export async function updateDbUser(
   id: string,
   updates: Partial<Pick<User, "name" | "email" | "interests" | "experienceAreas" | "emergingInterests" | "onboardingComplete">>
 ): Promise<User | null> {
+  const { userId } = await requireSession();
+  if (userId !== id) {
+    throw new ForbiddenError("user");
+  }
+
   try {
     const row = await prisma.user.update({
       where: { id },
@@ -78,6 +84,11 @@ export async function updateDbUser(
 // ─── Onboarding Actions ──────────────────────────────────────────
 
 export async function acceptTerms(userId: string): Promise<User | null> {
+  const { userId: callerUserId } = await requireSession();
+  if (callerUserId !== userId) {
+    throw new ForbiddenError("user");
+  }
+
   try {
     const row = await prisma.user.update({
       where: { id: userId },
@@ -97,6 +108,11 @@ export async function completeOnboarding(
     emergingInterests: string[];
   }
 ): Promise<User | null> {
+  const { userId: callerUserId } = await requireSession();
+  if (callerUserId !== userId) {
+    throw new ForbiddenError("user");
+  }
+
   try {
     const row = await prisma.user.update({
       where: { id: userId },
@@ -123,6 +139,11 @@ export async function updateInfraPreferences(
   userId: string,
   prefs: InfraPreferences
 ): Promise<User | null> {
+  const { userId: callerUserId } = await requireSession();
+  if (callerUserId !== userId) {
+    throw new ForbiddenError("user");
+  }
+
   try {
     const row = await prisma.user.update({
       where: { id: userId },
@@ -137,6 +158,11 @@ export async function updateInfraPreferences(
 export async function getInfraPreferences(
   userId: string
 ): Promise<InfraPreferences | null> {
+  const { userId: callerUserId } = await requireSession();
+  if (callerUserId !== userId) {
+    throw new ForbiddenError("user");
+  }
+
   try {
     const row = await prisma.user.findUnique({
       where: { id: userId },
