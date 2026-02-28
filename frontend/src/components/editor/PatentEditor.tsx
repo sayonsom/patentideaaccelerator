@@ -92,7 +92,7 @@ export function PatentEditor({ documentId, initialContent }: PatentEditorProps) 
       }),
       Underline,
       TextAlign.configure({
-        types: ["heading", "patentParagraph"],
+        types: ["heading", "paragraph"],
       }),
       Superscript,
       Subscript,

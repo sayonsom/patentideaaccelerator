@@ -258,7 +258,7 @@ export function EditorToolbar({
           const node = resolvedPos.parent;
 
           if (
-            node.type.name === "patentParagraph" &&
+            node.type.name === "paragraph" &&
             node.attrs.paragraphNumber != null
           ) {
             // Remove numbering
@@ -269,7 +269,7 @@ export function EditorToolbar({
             let maxNum = 0;
             editor.state.doc.descendants((n) => {
               if (
-                n.type.name === "patentParagraph" &&
+                n.type.name === "paragraph" &&
                 typeof n.attrs.paragraphNumber === "number"
               ) {
                 maxNum = Math.max(maxNum, n.attrs.paragraphNumber);
@@ -288,7 +288,7 @@ export function EditorToolbar({
                 const { from } = editor.state.selection;
                 const node = editor.state.doc.resolve(from).parent;
                 return (
-                  node.type.name === "patentParagraph" &&
+                  node.type.name === "paragraph" &&
                   node.attrs.paragraphNumber != null
                 );
               })()

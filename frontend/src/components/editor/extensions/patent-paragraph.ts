@@ -6,7 +6,7 @@ export interface PatentParagraphOptions {
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
-    patentParagraph: {
+    paragraph: {
       /**
        * Convert the current paragraph to a numbered patent paragraph.
        * @param paragraphNumber The paragraph number to assign.
@@ -29,7 +29,7 @@ declare module '@tiptap/core' {
  * CSS should handle rendering the number in the left margin as [0001].
  */
 export const PatentParagraph = Node.create<PatentParagraphOptions>({
-  name: 'patentParagraph',
+  name: 'paragraph',
 
   priority: 1000,
 

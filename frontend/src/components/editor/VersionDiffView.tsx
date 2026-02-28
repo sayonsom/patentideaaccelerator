@@ -39,7 +39,6 @@ function extractTextFromTiptapJSON(node: unknown): string {
     // Block-level node types that should produce separate lines
     const blockTypes = new Set([
       "paragraph",
-      "patentParagraph",
       "heading",
       "codeBlock",
       "bulletList",

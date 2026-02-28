@@ -39,12 +39,12 @@ function numberedParagraph(text: string): TiptapNode {
   paragraphCounter += 1;
   if (!text.trim()) {
     return {
-      type: "patentParagraph",
+      type: "paragraph",
       attrs: { paragraphNumber: paragraphCounter },
     };
   }
   return {
-    type: "patentParagraph",
+    type: "paragraph",
     attrs: { paragraphNumber: paragraphCounter },
     content: [makeText(text) as unknown as TiptapNode],
   };
