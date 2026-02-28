@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 
 export default function OnboardingLayout({
   children,
@@ -11,9 +12,15 @@ export default function OnboardingLayout({
     <div className="min-h-screen bg-white flex flex-col">
       {/* Minimal header */}
       <header className="h-14 border-b border-border flex items-center px-6">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-blue-ribbon text-lg">&#9889;</span>
-          <span className="font-serif font-bold text-ink text-lg">IP Ramp</span>
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/ipramp_long_logo.png"
+            alt="IP Ramp"
+            width={384}
+            height={216}
+            className="h-14 w-auto"
+            priority
+          />
         </Link>
       </header>
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 // ─── Animation Helper ─────────────────────────────────────────
@@ -197,11 +198,15 @@ function StickyNav() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-blue-ribbon text-xl">{"\u26A1"}</span>
-          <span className="font-serif font-bold text-xl text-ink">
-            IP Ramp
-          </span>
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/ipramp_long_logo.png"
+            alt="IP Ramp"
+            width={384}
+            height={216}
+            className="h-14 w-auto"
+            priority
+          />
         </Link>
 
         <div className="hidden md:flex items-center gap-8 text-sm font-light">
@@ -898,11 +903,18 @@ function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
           {/* Brand */}
           <div className="col-span-2">
-            <Link href="/" className="flex items-center gap-2 mb-4">
+            <Link href="/" className="hidden lg:inline-flex items-center mb-4">
+              <Image
+                src="/ipramp_long_logo.png"
+                alt="IP Ramp"
+                width={384}
+                height={216}
+                className="h-16 w-auto"
+              />
+            </Link>
+            <Link href="/" className="inline-flex lg:hidden items-center gap-2 mb-4">
               <span className="text-blue-ribbon text-xl">{"\u26A1"}</span>
-              <span className="font-serif font-bold text-lg text-ink">
-                IP Ramp
-              </span>
+              <span className="font-serif font-bold text-lg text-ink">IP Ramp</span>
             </Link>
             <p className="text-sm font-light text-neutral-light leading-relaxed max-w-xs">
               Discover and monetize the patents hiding in your engineering work.

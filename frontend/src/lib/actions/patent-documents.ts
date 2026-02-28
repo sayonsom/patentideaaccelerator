@@ -7,7 +7,7 @@ import {
   ForbiddenError,
   NotFoundError,
 } from "@/lib/actions/authorization";
-import type { PatentDocument, DocumentStatus } from "@/lib/types";
+import type { PatentDocument, DocumentStatus, DocumentType } from "@/lib/types";
 import { Prisma } from "@prisma/client";
 import type { PatentDocument as PrismaPatentDocument } from "@prisma/client";
 
@@ -21,6 +21,10 @@ function mapPrismaToPatentDocument(row: PrismaPatentDocument): PatentDocument {
     title: row.title,
     content: (row.content as Record<string, unknown>) ?? {},
     status: row.status as DocumentStatus,
+    documentType: row.documentType as DocumentType,
+    templateId: row.templateId,
+    sortOrder: row.sortOrder,
+    wordCount: row.wordCount,
     paragraphCounter: row.paragraphCounter,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -89,17 +93,23 @@ async function requireDocumentAccess(documentId: string) {
  * Create a new patent document for an idea.
  *
  * @secured — Requires authentication and access to the idea.
- *            Only one document per idea (enforced by unique constraint).
  */
 export async function createPatentDocument(
   ideaId: string,
   initialContent: Record<string, unknown>,
-  title?: string
+  title?: string,
+  documentType?: DocumentType,
+  templateId?: string
 ): Promise<PatentDocument> {
   const { userId } = await requireSession();
 
   // Verify the user has access to the idea
   await requireIdeaAccess(ideaId);
+
+  // Determine sortOrder — place new document at the end
+  const existingCount = await prisma.patentDocument.count({
+    where: { ideaId },
+  });
 
   const row = await prisma.patentDocument.create({
     data: {
@@ -108,6 +118,10 @@ export async function createPatentDocument(
       title: title ?? "",
       content: initialContent as unknown as Prisma.InputJsonValue,
       status: "draft",
+      documentType: documentType ?? "utility",
+      templateId: templateId ?? null,
+      sortOrder: existingCount,
+      wordCount: 0,
       paragraphCounter: 0,
     },
   });
@@ -116,21 +130,34 @@ export async function createPatentDocument(
 }
 
 /**
- * Get a patent document by its linked idea ID.
+ * Get all patent documents for an idea, ordered by sortOrder.
  *
  * @secured — Requires access to the idea (owner OR team member).
  */
-export async function getPatentDocumentByIdeaId(
+export async function getPatentDocumentsByIdeaId(
   ideaId: string
-): Promise<PatentDocument | null> {
+): Promise<PatentDocument[]> {
   // Verify the user has access to the idea
   await requireIdeaAccess(ideaId);
 
-  const row = await prisma.patentDocument.findUnique({
+  const rows = await prisma.patentDocument.findMany({
     where: { ideaId },
+    orderBy: { sortOrder: "asc" },
   });
 
-  return row ? mapPrismaToPatentDocument(row) : null;
+  return rows.map(mapPrismaToPatentDocument);
+}
+
+/**
+ * Get a single patent document by ID.
+ *
+ * @secured — Requires document access (owner or idea-level access).
+ */
+export async function getPatentDocumentById(
+  documentId: string
+): Promise<PatentDocument> {
+  const { document: doc } = await requireDocumentAccess(documentId);
+  return mapPrismaToPatentDocument(doc);
 }
 
 /**
@@ -141,7 +168,8 @@ export async function getPatentDocumentByIdeaId(
 export async function updatePatentDocumentContent(
   documentId: string,
   content: Record<string, unknown>,
-  paragraphCounter?: number
+  paragraphCounter?: number,
+  wordCount?: number
 ): Promise<PatentDocument> {
   await requireDocumentAccess(documentId);
 
@@ -151,6 +179,10 @@ export async function updatePatentDocumentContent(
 
   if (paragraphCounter !== undefined) {
     data.paragraphCounter = paragraphCounter;
+  }
+
+  if (wordCount !== undefined) {
+    data.wordCount = wordCount;
   }
 
   const row = await prisma.patentDocument.update({
@@ -175,6 +207,59 @@ export async function updatePatentDocumentStatus(
   const row = await prisma.patentDocument.update({
     where: { id: documentId },
     data: { status },
+  });
+
+  return mapPrismaToPatentDocument(row);
+}
+
+/**
+ * Duplicate a patent document (creates a copy with "(Copy)" suffix).
+ *
+ * @secured — Requires document access.
+ */
+export async function duplicatePatentDocument(
+  documentId: string
+): Promise<PatentDocument> {
+  const { userId } = await requireSession();
+  const { document: source } = await requireDocumentAccess(documentId);
+
+  // Determine sortOrder — place after the source
+  const existingCount = await prisma.patentDocument.count({
+    where: { ideaId: source.ideaId },
+  });
+
+  const row = await prisma.patentDocument.create({
+    data: {
+      ideaId: source.ideaId,
+      userId,
+      title: source.title ? `${source.title} (Copy)` : "Untitled (Copy)",
+      content: source.content as unknown as Prisma.InputJsonValue,
+      status: "draft",
+      documentType: source.documentType,
+      templateId: source.templateId,
+      sortOrder: existingCount,
+      wordCount: source.wordCount,
+      paragraphCounter: source.paragraphCounter,
+    },
+  });
+
+  return mapPrismaToPatentDocument(row);
+}
+
+/**
+ * Update document title.
+ *
+ * @secured — Requires document access.
+ */
+export async function updatePatentDocumentTitle(
+  documentId: string,
+  title: string
+): Promise<PatentDocument> {
+  await requireDocumentAccess(documentId);
+
+  const row = await prisma.patentDocument.update({
+    where: { id: documentId },
+    data: { title },
   });
 
   return mapPrismaToPatentDocument(row);

@@ -7,7 +7,8 @@
     "build": "prisma generate && next build",
     "postinstall": "prisma generate",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "auth:reset-credentials": "node scripts/reset-user-credentials.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",

@@ -11,12 +11,13 @@ import { usePriorArt } from "@/hooks/usePriorArt";
 import { Button, Tabs, TabPanel, Input, Textarea, Badge, Card, TagInput, Modal, Spinner } from "@/components/ui";
 import { ScoreMatrix } from "./ScoreMatrix";
 import { AlignmentPanel } from "./AlignmentPanel";
-import { PipelineProgress } from "./PipelineProgress";
+import { CompletionPill } from "./CompletionPill";
+import { NextStepBanner } from "./NextStepBanner";
+import { OverflowMenu } from "./OverflowMenu";
 import { AIRefineButton } from "./AIRefineButton";
 import { ClaimDraftDisplay } from "./ClaimDraft";
 import { InventiveStepCard } from "./InventiveStepCard";
 import { MarketNeedsCard } from "./MarketNeedsCard";
-import { ExportButtons } from "./ExportButtons";
 import { SearchForm } from "@/components/prior-art/SearchForm";
 import { PatentResultCard } from "@/components/prior-art/PatentResultCard";
 import { TRIZWorksheet } from "@/components/frameworks/TRIZWorksheet";
@@ -25,7 +26,7 @@ import { CKWorksheet } from "@/components/frameworks/CKWorksheet";
 import { FMEAInversion } from "@/components/frameworks/FMEAInversion";
 import { ContinuationPanel } from "./ContinuationPanel";
 import { DocumentTab } from "@/components/editor/DocumentTab";
-import { getStatusColor, getTotalScore, getScoreVerdict, timeAgo, getAliceRiskColor } from "@/lib/utils";
+import { getStatusColor, getTotalScore, getScoreVerdict, timeAgo } from "@/lib/utils";
 
 interface IdeaDetailProps {
   idea: Idea;
@@ -39,7 +40,7 @@ const STATUS_OPTIONS: { value: Idea["status"]; label: string }[] = [
   { value: "archived", label: "Archived" },
 ];
 
-const BASE_DETAIL_TABS = [
+const BASE_DETAIL_TABS: { id: string; label: string; status?: "complete" | "partial" | "empty" }[] = [
   { id: "overview", label: "Overview" },
   { id: "framework", label: "Framework" },
   { id: "claims", label: "Claims" },
@@ -70,20 +71,98 @@ const FRAMEWORK_OPTIONS: { value: FrameworkType; label: string; desc: string }[]
   { value: "fmea", label: "FMEA Inversion", desc: "Turn failure modes into patent candidates" },
 ];
 
+// ─── Tab status computation ──────────────────────────────────────────
+
+function getTabStatus(idea: Idea, tabId: string): "complete" | "partial" | "empty" {
+  switch (tabId) {
+    case "overview": {
+      const hasProblem = !!idea.problemStatement && idea.problemStatement.length > 20;
+      const hasSolution = !!idea.proposedSolution && !!idea.technicalApproach;
+      if (hasProblem && hasSolution) return "complete";
+      if (hasProblem || hasSolution) return "partial";
+      return "empty";
+    }
+    case "framework":
+      return idea.frameworkUsed !== "none" ? "complete" : "empty";
+    case "claims":
+      return idea.claimDraft !== null ? "complete" : "empty";
+    case "patent-filing": {
+      const hasInv = !!idea.inventiveStepAnalysis;
+      const hasMkt = !!idea.marketNeedsAnalysis;
+      if (hasInv && hasMkt) return "complete";
+      if (hasInv || hasMkt) return "partial";
+      return "empty";
+    }
+    case "red-team":
+      return !!idea.redTeamNotes && idea.redTeamNotes.length > 20 ? "complete" : "empty";
+    case "prior-art":
+      return !!idea.priorArtNotes && idea.priorArtNotes.length > 10 ? "complete" : "empty";
+    default:
+      return "empty";
+  }
+}
+
+// ─── Collapsible sidebar section ─────────────────────────────────────
+
+function SidebarSection({
+  title,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-between w-full py-2"
+      >
+        <h3 className="text-[10px] font-medium text-text-muted uppercase tracking-wider">
+          {title}
+        </h3>
+        <svg
+          className={`w-3.5 h-3.5 text-text-muted transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && <div className="space-y-4 pb-2">{children}</div>}
+    </div>
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────────────────
+
 export function IdeaDetail({ idea }: IdeaDetailProps) {
   const router = useRouter();
   const updateIdea = useIdeaStore((s) => s.updateIdea);
   const removeIdea = useIdeaStore((s) => s.removeIdea);
   const [activeTab, setActiveTab] = useState("overview");
   const [editing, setEditing] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const showContinuations = idea.status === "filed" || idea.status === "scored";
+
+  // Compute tab statuses
   const detailTabs = useMemo(() => {
+    const tabs = BASE_DETAIL_TABS.map((tab) => ({
+      ...tab,
+      status: getTabStatus(idea, tab.id),
+    }));
     if (showContinuations) {
-      return [...BASE_DETAIL_TABS, { id: "continuations", label: "Continuations" }];
+      tabs.push({ id: "continuations", label: "Continuations", status: "empty" as const });
     }
-    return BASE_DETAIL_TABS;
-  }, [showContinuations]);
+    return tabs;
+  }, [idea, showContinuations]);
 
   const update = useCallback(
     (updates: Partial<Idea>) => {
@@ -102,18 +181,42 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
     }
   }
 
+  function handleArchive() {
+    update({ status: "archived" });
+  }
+
   function handleStageClick(tabId: string) {
     setActiveTab(tabId);
   }
 
+  function handleNextAction(actionId: string) {
+    // For actions that map to tabs, navigate there
+    const tabMap: Record<string, string> = {
+      alice: "overview",
+      claims: "claims",
+      "inventive-step": "patent-filing",
+      "market-needs": "patent-filing",
+      "red-team": "red-team",
+    };
+    const tab = tabMap[actionId];
+    if (tab) setActiveTab(tab);
+  }
+
+  // Alice score bar color
+  const aliceBarColor = idea.aliceScore
+    ? idea.aliceScore.overallScore >= 70
+      ? "#10b981"
+      : idea.aliceScore.overallScore >= 40
+        ? "#f59e0b"
+        : "#ef4444"
+    : undefined;
+
   return (
     <div className="flex flex-col lg:flex-row gap-6">
-      {/* Left: tabbed content */}
+      {/* Left: main content */}
       <div className="flex-1 min-w-0">
-        {/* Pipeline progress */}
-        <PipelineProgress idea={idea} onStageClick={handleStageClick} />
-
-        <div className="flex items-start justify-between mb-4">
+        {/* ── Title Area ── */}
+        <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
             {editing ? (
               <Input
@@ -123,28 +226,39 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
                 className="text-xl font-semibold"
               />
             ) : (
-              <h1 className="text-xl font-serif font-bold text-ink truncate">
+              <h1 className="text-xl font-serif font-bold text-ink leading-snug line-clamp-2">
                 {idea.title || "Untitled Idea"}
               </h1>
             )}
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               <Badge variant="solid" color={getStatusColor(idea.status)}>
                 {idea.status}
               </Badge>
-              <span className="text-xs text-text-muted">Updated {timeAgo(idea.updatedAt)}</span>
+              <span className="text-xs text-text-muted">{timeAgo(idea.updatedAt)}</span>
+              <CompletionPill idea={idea} onStageClick={handleStageClick} />
             </div>
           </div>
-          <div className="flex items-center gap-2 ml-4 shrink-0">
-            <ExportButtons ideaId={idea.id} ideaTitle={idea.title} />
+          <div className="flex items-center gap-1.5 ml-4 shrink-0">
             <Button variant="ghost" size="sm" onClick={() => setEditing(!editing)}>
               {editing ? "Done" : "Edit"}
             </Button>
-            <Button variant="danger" size="sm" onClick={handleDelete}>
-              Delete
-            </Button>
+            <OverflowMenu
+              ideaId={idea.id}
+              ideaTitle={idea.title}
+              onDelete={handleDelete}
+              onArchive={handleArchive}
+            />
           </div>
         </div>
 
+        {/* ── Next Step Banner ── */}
+        <NextStepBanner
+          idea={idea}
+          onNavigate={handleStageClick}
+          onAction={handleNextAction}
+        />
+
+        {/* ── Tabs ── */}
         <Tabs tabs={detailTabs} activeTab={activeTab} onChange={setActiveTab}>
           <TabPanel id="overview" activeTab={activeTab}>
             <OverviewTab idea={idea} update={update} editing={editing} />
@@ -171,131 +285,234 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
             <TabPanel id="continuations" activeTab={activeTab}>
               <ContinuationPanel idea={idea} />
             </TabPanel>
-          )}        </Tabs>
+          )}
+        </Tabs>
       </div>
 
-      {/* Right sidebar */}
-      <div className="w-full lg:w-80 shrink-0 space-y-4">
-        {/* Score matrix */}
-        <Card>
-          <ScoreMatrix
-            score={idea.score}
-            onChange={(score: IdeaScore) => update({ score })}
-          />
-          {idea.score && (
-            <div className="mt-3 pt-3 border-t border-border">
-              <div
-                className="text-sm font-normal"
-                style={{ color: getScoreVerdict(getTotalScore(idea.score)).color }}
-              >
-                {getScoreVerdict(getTotalScore(idea.score)).label} ({getTotalScore(idea.score)}/9)
+      {/* ── Sidebar collapse toggle ── */}
+      <button
+        type="button"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="hidden lg:flex items-center justify-center w-5 shrink-0 group"
+        title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+      >
+        <div className="w-px h-full bg-border group-hover:bg-neutral-light transition-colors relative">
+          <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-8 flex items-center justify-center rounded bg-white border border-border group-hover:border-neutral-light opacity-0 group-hover:opacity-100 transition-opacity">
+            <svg
+              className={`w-3 h-3 text-text-muted transition-transform ${sidebarOpen ? "" : "rotate-180"}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </button>
+
+      {/* ── Right sidebar ── */}
+      <div
+        className={`shrink-0 transition-all duration-200 overflow-hidden ${
+          sidebarOpen ? "w-full lg:w-80" : "w-0 lg:w-0"
+        }`}
+      >
+        <div className="w-full lg:w-80 space-y-2">
+          {/* Scoring Section */}
+          <SidebarSection title="Scoring">
+            <Card>
+              <ScoreMatrix
+                score={idea.score}
+                onChange={(score: IdeaScore) => update({ score })}
+                compact
+              />
+              {idea.score && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <div
+                    className="text-sm font-normal"
+                    style={{ color: getScoreVerdict(getTotalScore(idea.score)).color }}
+                  >
+                    {getScoreVerdict(getTotalScore(idea.score)).label} ({getTotalScore(idea.score)}/9)
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* Alice score — compact bar mode */}
+            {idea.aliceScore ? (
+              <AliceScoreCompact score={idea.aliceScore} barColor={aliceBarColor!} />
+            ) : (
+              <AliceCheckButton idea={idea} update={update} />
+            )}
+
+            {/* Business Alignment */}
+            <AlignmentPanel idea={idea} />
+          </SidebarSection>
+
+          {/* Properties Section */}
+          <SidebarSection title="Properties">
+            {/* Status */}
+            <Card>
+              <h3 className="text-sm font-medium text-ink mb-2">Status</h3>
+              <div className="flex flex-wrap gap-1.5">
+                {STATUS_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => update({ status: opt.value })}
+                    className={`px-2.5 py-1 rounded text-xs font-normal transition-colors ${
+                      idea.status === opt.value
+                        ? "bg-accent-light text-blue-ribbon"
+                        : "bg-white text-neutral-dark hover:text-ink"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
+            </Card>
+
+            {/* Tags */}
+            <Card>
+              <h3 className="text-sm font-medium text-ink mb-2">Tags</h3>
+              <TagInput
+                tags={idea.tags}
+                onChange={(tags) => update({ tags })}
+                placeholder="Add tags..."
+              />
+            </Card>
+          </SidebarSection>
+
+          {/* Metadata Section */}
+          <SidebarSection title="Metadata" defaultOpen={false}>
+            {/* Sprint Association */}
+            {idea.sprintId && (
+              <Card>
+                <h3 className="text-sm font-medium text-ink mb-2">Sprint</h3>
+                <div className="flex items-center justify-between">
+                  <Link
+                    href={`/sprints/${idea.sprintId}`}
+                    className="inline-flex items-center gap-1.5 text-xs text-blue-ribbon hover:underline"
+                  >
+                    <span>&#9651;</span>
+                    View Sprint
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      const { unlinkFromSprint } = await import("@/lib/api");
+                      await unlinkFromSprint(idea.id);
+                      update({ sprintId: null });
+                    }}
+                    className="text-[11px] text-text-muted hover:text-red-500 transition-colors"
+                  >
+                    Remove from Sprint
+                  </button>
+                </div>
+              </Card>
+            )}
+
+            <Card>
+              <dl className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <dt className="text-text-muted">Created</dt>
+                  <dd className="text-neutral-dark">{timeAgo(idea.createdAt)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-text-muted">Framework</dt>
+                  <dd className="text-neutral-dark">{idea.frameworkUsed === "none" ? "Freeform" : idea.frameworkUsed.toUpperCase()}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-text-muted">Phase</dt>
+                  <dd className="text-neutral-dark capitalize">{idea.phase}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-text-muted">ID</dt>
+                  <dd className="text-text-muted font-mono">{idea.id.slice(0, 8)}</dd>
+                </div>
+              </dl>
+            </Card>
+          </SidebarSection>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Compact Alice Score (sidebar bar mode) ──────────────────────────
+
+function AliceScoreCompact({
+  score,
+  barColor,
+}: {
+  score: NonNullable<Idea["aliceScore"]>;
+  barColor: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium text-ink">Section 101</h3>
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-mono tabular-nums text-ink">{score.overallScore}</span>
+          <span className="text-[10px] text-text-muted">/100</span>
+          <Badge variant="solid" color={barColor} size="sm">
+            {score.abstractIdeaRisk}
+          </Badge>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-1.5 bg-neutral-off-white rounded-full overflow-hidden mb-2">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${score.overallScore}%`, backgroundColor: barColor }}
+        />
+      </div>
+
+      {!expanded ? (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="text-[11px] text-blue-ribbon hover:text-accent-hover transition-colors"
+        >
+          View Details
+        </button>
+      ) : (
+        <div className="space-y-2.5 pt-2 border-t border-border animate-fade-in">
+          <SidebarDetail title="Abstract Idea Risk" text={score.abstractIdeaAnalysis} />
+          <SidebarDetail title="Practical Application" text={score.practicalApplication} />
+          <SidebarDetail title="Inventive Concept" text={score.inventiveConcept} />
+          {score.recommendations.length > 0 && (
+            <div>
+              <h4 className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1">Recommendations</h4>
+              <ul className="space-y-1">
+                {score.recommendations.map((rec, i) => (
+                  <li key={i} className="text-xs text-neutral-dark flex items-start gap-1">
+                    <span className="text-blue-ribbon shrink-0">{"\u2022"}</span>
+                    {rec}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
-        </Card>
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="text-[11px] text-text-muted hover:text-ink transition-colors"
+          >
+            Collapse
+          </button>
+        </div>
+      )}
+    </Card>
+  );
+}
 
-        {/* Alice score */}
-        {idea.aliceScore ? (
-          <Card>
-            <h3 className="text-sm font-medium text-ink mb-2">Alice / 101 Score</h3>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl font-normal text-ink">{idea.aliceScore.overallScore}</span>
-              <span className="text-xs text-text-muted">/100</span>
-              <Badge
-                variant="solid"
-                color={getAliceRiskColor(idea.aliceScore.abstractIdeaRisk)}
-              >
-                {idea.aliceScore.abstractIdeaRisk} risk
-              </Badge>
-            </div>
-            <p className="text-xs text-neutral-dark">{idea.aliceScore.practicalApplication}</p>
-          </Card>
-        ) : (
-          <AliceCheckButton idea={idea} update={update} />
-        )}
-
-        {/* Business Alignment */}
-        <AlignmentPanel idea={idea} />
-
-        {/* Sprint Association */}
-        {idea.sprintId && (
-          <Card>
-            <h3 className="text-sm font-medium text-ink mb-2">Sprint</h3>
-            <div className="flex items-center justify-between">
-              <Link
-                href={`/sprints/${idea.sprintId}`}
-                className="inline-flex items-center gap-1.5 text-xs text-blue-ribbon hover:underline"
-              >
-                <span>&#9651;</span>
-                View Sprint
-              </Link>
-              <button
-                onClick={async () => {
-                  const { unlinkFromSprint } = await import("@/lib/api");
-                  await unlinkFromSprint(idea.id);
-                  update({ sprintId: null });
-                }}
-                className="text-[11px] text-text-muted hover:text-red-500 transition-colors"
-              >
-                Remove from Sprint
-              </button>
-            </div>
-          </Card>
-        )}
-
-        {/* Status */}
-        <Card>
-          <h3 className="text-sm font-medium text-ink mb-2">Status</h3>
-          <div className="flex flex-wrap gap-1.5">
-            {STATUS_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => update({ status: opt.value })}
-                className={`px-2.5 py-1 rounded text-xs font-normal transition-colors ${
-                  idea.status === opt.value
-                    ? "bg-accent-light text-blue-ribbon"
-                    : "bg-white text-neutral-dark hover:text-ink"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </Card>
-
-        {/* Tags */}
-        <Card>
-          <h3 className="text-sm font-medium text-ink mb-2">Tags</h3>
-          <TagInput
-            tags={idea.tags}
-            onChange={(tags) => update({ tags })}
-            placeholder="Add tags..."
-          />
-        </Card>
-
-        {/* Metadata */}
-        <Card>
-          <h3 className="text-sm font-medium text-ink mb-2">Metadata</h3>
-          <dl className="space-y-1.5 text-xs">
-            <div className="flex justify-between">
-              <dt className="text-text-muted">Created</dt>
-              <dd className="text-neutral-dark">{timeAgo(idea.createdAt)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-text-muted">Framework</dt>
-              <dd className="text-neutral-dark">{idea.frameworkUsed === "none" ? "Freeform" : idea.frameworkUsed.toUpperCase()}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-text-muted">Phase</dt>
-              <dd className="text-neutral-dark capitalize">{idea.phase}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-text-muted">ID</dt>
-              <dd className="text-text-muted font-mono">{idea.id.slice(0, 8)}</dd>
-            </div>
-          </dl>
-        </Card>
-      </div>
+function SidebarDetail({ title, text }: { title: string; text: string }) {
+  return (
+    <div>
+      <h4 className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1">{title}</h4>
+      <p className="text-xs text-neutral-dark">{text}</p>
     </div>
   );
 }

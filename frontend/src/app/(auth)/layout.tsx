@@ -1,15 +1,20 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* Minimal top bar */}
       <header className="h-14 border-b border-border flex items-center px-6">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-blue-ribbon font-normal text-xl">{"\u26A1"}</span>
-          <span className="font-serif font-bold text-lg text-ink">
-            IP Ramp
-          </span>
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/ipramp_long_logo.png"
+            alt="IP Ramp"
+            width={384}
+            height={216}
+            className="h-14 w-auto"
+            priority
+          />
         </Link>
       </header>
 

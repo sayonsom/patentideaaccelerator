@@ -854,6 +854,7 @@ export const MAGIC_COLUMN_PRESETS = [
 // ═══════════════════════════════════════════════════════════════════
 
 export type DocumentStatus = "draft" | "in_review" | "finalized";
+export type DocumentType = "utility" | "provisional" | "pct" | "epo" | "custom";
 export type VersionTrigger = "manual" | "auto" | "stage_change" | "ai_generation";
 export type CommentSource = "user" | "ai_suggestion";
 export type ImageSourceType = "upload" | "generated" | "sketch_converted";
@@ -865,6 +866,10 @@ export interface PatentDocument {
   title: string;
   content: Record<string, unknown>;  // Tiptap JSON
   status: DocumentStatus;
+  documentType: DocumentType;
+  templateId: string | null;
+  sortOrder: number;
+  wordCount: number;
   paragraphCounter: number;
   createdAt: string;
   updatedAt: string;

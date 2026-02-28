@@ -133,17 +133,30 @@ providers.push(
 
         const existing = await prisma.user.findUnique({
           where: { email },
-          select: { id: true, passwordHash: true, cognitoSub: true },
+          select: { id: true, email: true, name: true, passwordHash: true, cognitoSub: true },
         });
 
-        if (existing?.passwordHash) {
-          throw new Error("An account with this email already exists.");
-        }
         if (existing?.cognitoSub) {
           throw new Error("This account uses Single Sign-On.");
         }
-        if (existing) {
+
+        // Existing "orphaned" rows (no password + no SSO link) can be claimed
+        // via signup to recover access without direct DB intervention.
+        if (existing?.passwordHash) {
           throw new Error("An account with this email already exists.");
+        }
+        if (existing) {
+          const passwordHash = await hashPassword(password);
+          const updated = await prisma.user.update({
+            where: { id: existing.id },
+            data: {
+              name: existing.name?.trim() ? existing.name : name,
+              passwordHash,
+              accountType,
+            },
+          });
+          invalidateRbacCache(existing.id);
+          return { id: updated.id, email: updated.email, name: updated.name };
         }
 
         const passwordHash = await hashPassword(password);
@@ -163,13 +176,16 @@ providers.push(
       // Login path — verifies existing local password hash.
       const user = await prisma.user.findUnique({
         where: { email },
-        select: { id: true, email: true, name: true, passwordHash: true },
+        select: { id: true, email: true, name: true, passwordHash: true, cognitoSub: true },
       });
       if (!user) {
         throw new Error("Invalid email or password.");
       }
       if (!user.passwordHash) {
-        throw new Error("This account uses Single Sign-On.");
+        if (user.cognitoSub) {
+          throw new Error("This account uses Single Sign-On.");
+        }
+        throw new Error("Password login is not set up for this account. Please reset your credentials.");
       }
       const passwordOk = await verifyPassword(password, user.passwordHash);
       if (!passwordOk) {

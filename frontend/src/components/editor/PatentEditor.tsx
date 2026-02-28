@@ -61,6 +61,7 @@ export function PatentEditor({ documentId, initialContent }: PatentEditorProps) 
   // ── Tiptap editor instance ──────────────────────────────────────
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         // Undo/redo (tiptap v3 renamed `history` to `undoRedo`)

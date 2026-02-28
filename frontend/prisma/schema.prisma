@@ -225,7 +225,7 @@ model Idea {
   continuationResults   ContinuationResult[]
   promotedContinuations ContinuationResult[] @relation("PromotedIdea")
   magicColumnValues     MagicColumnValue[]
-  patentDocument        PatentDocument?
+  patentDocuments       PatentDocument[]
 
   @@map("ideas")
 }
@@ -471,11 +471,15 @@ model ChatHistory {
 
 model PatentDocument {
   id               String   @id @default(uuid())
-  ideaId           String   @unique @map("idea_id")
+  ideaId           String   @map("idea_id")
   userId           String   @map("user_id")
   title            String   @default("")
   content          Json     @default("{}") @db.JsonB  // Tiptap JSON document
   status           String   @default("draft")          // "draft" | "in_review" | "finalized"
+  documentType     String   @default("utility") @map("document_type") // "utility" | "provisional" | "pct" | "epo" | "custom"
+  templateId       String?  @map("template_id")
+  sortOrder        Int      @default(0) @map("sort_order")
+  wordCount        Int      @default(0) @map("word_count")
   paragraphCounter Int      @default(0) @map("paragraph_counter")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
@@ -486,6 +490,7 @@ model PatentDocument {
   comments DocumentComment[]
   images   DocumentImage[]
 
+  @@index([ideaId])
   @@index([userId])
   @@map("patent_documents")
 }

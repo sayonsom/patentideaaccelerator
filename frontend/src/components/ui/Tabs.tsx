@@ -6,6 +6,7 @@ interface Tab {
   id: string;
   label: string;
   badge?: string;
+  status?: "complete" | "partial" | "empty";
 }
 
 interface TabsProps {
@@ -40,6 +41,13 @@ export function Tabs({ tabs, activeTab, onChange, children, className = "" }: Ta
             type="button"
           >
             {tab.label}
+            {tab.status && tab.status !== "empty" && (
+              <span
+                className={`ml-1.5 w-1.5 h-1.5 rounded-full inline-block ${
+                  tab.status === "complete" ? "bg-blue-ribbon" : "bg-yellow-warning"
+                }`}
+              />
+            )}
             {tab.badge && (
               <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-off-white text-text-muted">
                 {tab.badge}

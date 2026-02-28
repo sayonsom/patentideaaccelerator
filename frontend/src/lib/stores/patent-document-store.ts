@@ -7,13 +7,17 @@ import type {
   DocumentComment,
   DocumentImage,
   DocumentStatus,
+  DocumentType,
   VersionTrigger,
 } from "@/lib/types";
 import {
   createPatentDocument,
-  getPatentDocumentByIdeaId,
+  getPatentDocumentsByIdeaId,
   updatePatentDocumentContent,
   updatePatentDocumentStatus,
+  duplicatePatentDocument,
+  deletePatentDocument,
+  updatePatentDocumentTitle,
 } from "@/lib/actions/patent-documents";
 import {
   createDocumentVersion,
@@ -31,7 +35,12 @@ import {
 // ─── Initial State ───────────────────────────────────────────────
 
 const INITIAL_STATE = {
-  // Core document
+  // Multi-document list
+  documents: [] as PatentDocument[],
+  selectedDocumentId: null as string | null,
+  isLoadingList: false,
+
+  // Core document (selected)
   document: null as PatentDocument | null,
   isLoading: false,
   isDirty: false,
@@ -52,12 +61,20 @@ const INITIAL_STATE = {
 
   // Images
   images: [] as DocumentImage[],
+
+  // Focus mode
+  focusMode: false,
 } as const;
 
 // ─── Store Interface ─────────────────────────────────────────────
 
 interface PatentDocumentState {
-  // Core document state
+  // Multi-document list
+  documents: PatentDocument[];
+  selectedDocumentId: string | null;
+  isLoadingList: boolean;
+
+  // Core document state (selected document)
   document: PatentDocument | null;
   isLoading: boolean;
   isDirty: boolean;
@@ -79,16 +96,27 @@ interface PatentDocumentState {
   // Images
   images: DocumentImage[];
 
-  // Actions - Document
-  loadDocument: (ideaId: string) => Promise<void>;
+  // Focus mode
+  focusMode: boolean;
+
+  // Actions - Document List
+  loadDocuments: (ideaId: string) => Promise<void>;
+  selectDocument: (documentId: string) => void;
+
+  // Actions - Document CRUD
   initializeDocument: (
     ideaId: string,
     initialContent: Record<string, unknown>,
-    title?: string
+    title?: string,
+    documentType?: DocumentType,
+    templateId?: string
   ) => Promise<void>;
   updateContent: (content: Record<string, unknown>) => void;
   saveDocument: (label?: string, trigger?: VersionTrigger) => Promise<void>;
   setStatus: (status: DocumentStatus) => Promise<void>;
+  renameDocument: (documentId: string, title: string) => Promise<void>;
+  duplicateDocument: (documentId: string) => Promise<void>;
+  deleteDocument: (documentId: string) => Promise<void>;
 
   // Actions - Comments
   loadComments: () => Promise<void>;
@@ -118,6 +146,9 @@ interface PatentDocumentState {
   removeImage: (id: string) => void;
   setImages: (images: DocumentImage[]) => void;
 
+  // Actions - Focus mode
+  toggleFocusMode: () => void;
+
   // Reset
   reset: () => void;
 }
@@ -137,37 +168,70 @@ export const usePatentDocumentStore = create<PatentDocumentState>(
     // ── Initial values ───────────────────────────────────────────
     ...INITIAL_STATE,
 
-    // ── Document Actions ─────────────────────────────────────────
+    // ── Document List Actions ─────────────────────────────────────
 
-    loadDocument: async (ideaId: string) => {
-      set({ isLoading: true, error: null });
+    loadDocuments: async (ideaId: string) => {
+      set({ isLoadingList: true, error: null });
       try {
-        const doc = await getPatentDocumentByIdeaId(ideaId);
-        set({
-          document: doc,
-          isLoading: false,
-          isDirty: false,
-          lastSavedAt: doc?.updatedAt ?? null,
-        });
+        const docs = await getPatentDocumentsByIdeaId(ideaId);
+        set({ documents: docs, isLoadingList: false });
+
+        // Auto-select first document if none selected
+        const { selectedDocumentId } = get();
+        if (docs.length > 0 && !selectedDocumentId) {
+          get().selectDocument(docs[0].id);
+        }
       } catch (err) {
-        set({ isLoading: false, error: errorMessage(err) });
+        set({ isLoadingList: false, error: errorMessage(err) });
       }
     },
+
+    selectDocument: (documentId: string) => {
+      const { documents } = get();
+      const doc = documents.find((d) => d.id === documentId);
+      if (!doc) return;
+
+      set({
+        selectedDocumentId: documentId,
+        document: doc,
+        isDirty: false,
+        lastSavedAt: doc.updatedAt,
+        comments: [],
+        versions: [],
+        activeCommentId: null,
+        commentSidebarOpen: false,
+        versionPanelOpen: false,
+        previewVersionId: null,
+        images: [],
+      });
+    },
+
+    // ── Document CRUD Actions ─────────────────────────────────────
 
     initializeDocument: async (
       ideaId: string,
       initialContent: Record<string, unknown>,
-      title?: string
+      title?: string,
+      documentType?: DocumentType,
+      templateId?: string
     ) => {
       set({ isLoading: true, error: null });
       try {
-        const doc = await createPatentDocument(ideaId, initialContent, title);
-        set({
+        const doc = await createPatentDocument(
+          ideaId,
+          initialContent,
+          title,
+          documentType,
+          templateId
+        );
+        set((s) => ({
+          documents: [...s.documents, doc],
+          selectedDocumentId: doc.id,
           document: doc,
           isLoading: false,
           isDirty: false,
           lastSavedAt: doc.updatedAt,
-        });
+        }));
       } catch (err) {
         set({ isLoading: false, error: errorMessage(err) });
       }
@@ -194,11 +258,20 @@ export const usePatentDocumentStore = create<PatentDocumentState>(
 
       set({ isSaving: true, error: null });
       try {
+        // Compute word count from content
+        const contentStr = JSON.stringify(document.content);
+        const textNodes = contentStr.match(/"text":"([^"]*)"/g) || [];
+        const totalWords = textNodes.reduce((count, match) => {
+          const text = match.replace(/"text":"/, "").replace(/"$/, "");
+          return count + text.trim().split(/\s+/).filter(Boolean).length;
+        }, 0);
+
         // 1. Persist the content to the database
         const updated = await updatePatentDocumentContent(
           document.id,
           document.content,
-          document.paragraphCounter
+          document.paragraphCounter,
+          totalWords
         );
 
         // 2. Create a version snapshot
@@ -209,12 +282,17 @@ export const usePatentDocumentStore = create<PatentDocumentState>(
         );
 
         const now = new Date().toISOString();
-        set({
+
+        // Update the document in the list too
+        set((s) => ({
           document: updated,
+          documents: s.documents.map((d) =>
+            d.id === updated.id ? updated : d
+          ),
           isSaving: false,
           isDirty: false,
           lastSavedAt: now,
-        });
+        }));
       } catch (err) {
         set({ isSaving: false, error: errorMessage(err) });
       }
@@ -235,7 +313,67 @@ export const usePatentDocumentStore = create<PatentDocumentState>(
           "stage_change"
         );
 
-        set({ document: updated });
+        set((s) => ({
+          document: updated,
+          documents: s.documents.map((d) =>
+            d.id === updated.id ? updated : d
+          ),
+        }));
+      } catch (err) {
+        set({ error: errorMessage(err) });
+      }
+    },
+
+    renameDocument: async (documentId: string, title: string) => {
+      set({ error: null });
+      try {
+        const updated = await updatePatentDocumentTitle(documentId, title);
+        set((s) => ({
+          document: s.document?.id === documentId ? updated : s.document,
+          documents: s.documents.map((d) =>
+            d.id === documentId ? updated : d
+          ),
+        }));
+      } catch (err) {
+        set({ error: errorMessage(err) });
+      }
+    },
+
+    duplicateDocument: async (documentId: string) => {
+      set({ error: null });
+      try {
+        const copy = await duplicatePatentDocument(documentId);
+        set((s) => ({
+          documents: [...s.documents, copy],
+          selectedDocumentId: copy.id,
+          document: copy,
+          isDirty: false,
+          lastSavedAt: copy.updatedAt,
+        }));
+      } catch (err) {
+        set({ error: errorMessage(err) });
+      }
+    },
+
+    deleteDocument: async (documentId: string) => {
+      set({ error: null });
+      try {
+        const success = await deletePatentDocument(documentId);
+        if (success) {
+          set((s) => {
+            const remaining = s.documents.filter((d) => d.id !== documentId);
+            const wasSelected = s.selectedDocumentId === documentId;
+            return {
+              documents: remaining,
+              selectedDocumentId: wasSelected
+                ? remaining[0]?.id ?? null
+                : s.selectedDocumentId,
+              document: wasSelected
+                ? remaining[0] ?? null
+                : s.document,
+            };
+          });
+        }
       } catch (err) {
         set({ error: errorMessage(err) });
       }
@@ -352,12 +490,15 @@ export const usePatentDocumentStore = create<PatentDocumentState>(
       set({ error: null });
       try {
         const restored = await restoreDocumentVersion(document.id, versionId);
-        set({
+        set((s) => ({
           document: restored,
+          documents: s.documents.map((d) =>
+            d.id === restored.id ? restored : d
+          ),
           isDirty: false,
           lastSavedAt: new Date().toISOString(),
           previewVersionId: null,
-        });
+        }));
         // Reload the version list to include the new "Restored from" entry
         const versions = await listDocumentVersions(document.id);
         set({ versions });
@@ -382,10 +523,18 @@ export const usePatentDocumentStore = create<PatentDocumentState>(
 
     setImages: (images: DocumentImage[]) => set({ images }),
 
+    // ── Focus Mode ────────────────────────────────────────────────
+
+    toggleFocusMode: () =>
+      set((s) => ({ focusMode: !s.focusMode })),
+
     // ── Reset ────────────────────────────────────────────────────
 
     reset: () =>
       set({
+        documents: [],
+        selectedDocumentId: null,
+        isLoadingList: false,
         document: null,
         isLoading: false,
         isDirty: false,
@@ -400,6 +549,7 @@ export const usePatentDocumentStore = create<PatentDocumentState>(
         versionPanelOpen: false,
         previewVersionId: null,
         images: [],
+        focusMode: false,
       }),
   })
 );

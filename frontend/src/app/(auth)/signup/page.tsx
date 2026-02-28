@@ -79,6 +79,11 @@ function SignupForm() {
     signIn("cognito", { callbackUrl: getOnboardingUrl() });
   }
 
+  function handleGoogleSignUp() {
+    setLoading(true);
+    signIn("cognito", { callbackUrl: getOnboardingUrl() }, { identity_provider: "Google" });
+  }
+
   // Detect corporate email for UI hint
   const PERSONAL_DOMAINS = new Set([
     "gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.in",
@@ -175,14 +180,28 @@ function SignupForm() {
         <div className="flex-1 h-px bg-border" />
       </div>
 
-      <button
-        type="button"
-        onClick={handleCognitoSignUp}
-        disabled={loading}
-        className="w-full py-2.5 rounded-md border border-border text-ink font-normal text-sm hover:bg-neutral-off-white transition-colors disabled:opacity-60"
-      >
-        Sign up with Single Sign-On
-      </button>
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={handleGoogleSignUp}
+          disabled={loading}
+          className="w-full py-2.5 rounded-md border border-border text-ink font-normal text-sm hover:bg-neutral-off-white transition-colors disabled:opacity-60 inline-flex items-center justify-center gap-2"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.2-1.4 3.7-5.5 3.7-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.9 1.5l2.6-2.5C16.8 3.2 14.6 2.3 12 2.3A9.7 9.7 0 0 0 2.3 12 9.7 9.7 0 0 0 12 21.7c5.6 0 9.3-3.9 9.3-9.4 0-.6-.1-1.1-.1-1.6H12z" />
+          </svg>
+          Continue with Google
+        </button>
+
+        <button
+          type="button"
+          onClick={handleCognitoSignUp}
+          disabled={loading}
+          className="w-full py-2.5 rounded-md border border-border text-ink font-normal text-sm hover:bg-neutral-off-white transition-colors disabled:opacity-60"
+        >
+          Sign up with Corporate SSO
+        </button>
+      </div>
 
       <div className="mt-6 text-center">
         <p className="text-xs text-neutral-light">

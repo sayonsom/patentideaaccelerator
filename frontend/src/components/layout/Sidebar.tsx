@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
@@ -178,12 +179,18 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center h-14 px-4 border-b border-border">
-        <Link href="/" className="flex items-center gap-2 overflow-hidden">
-          <span className="text-blue-ribbon font-normal text-xl shrink-0">{"\u26A1"}</span>
-          {!collapsed && (
-            <span className="font-serif font-bold text-ink text-lg tracking-tight whitespace-nowrap">
-              IP Ramp
-            </span>
+        <Link href="/" className="flex items-center overflow-hidden">
+          {collapsed ? (
+            <span className="text-blue-ribbon font-normal text-xl shrink-0">{"\u26A1"}</span>
+          ) : (
+            <Image
+              src="/ipramp_long_logo.png"
+              alt="IP Ramp"
+              width={384}
+              height={216}
+              className="h-14 w-auto"
+              priority
+            />
           )}
         </Link>
         <button
