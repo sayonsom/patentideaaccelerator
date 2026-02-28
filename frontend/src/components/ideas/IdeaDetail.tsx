@@ -25,7 +25,7 @@ import { SITWorksheet } from "@/components/frameworks/SITWorksheet";
 import { CKWorksheet } from "@/components/frameworks/CKWorksheet";
 import { FMEAInversion } from "@/components/frameworks/FMEAInversion";
 import { ContinuationPanel } from "./ContinuationPanel";
-import { DocumentTab } from "@/components/editor/DocumentTab";
+import { DocumentModal } from "@/components/editor/DocumentModal";
 import { getStatusColor, getTotalScore, getScoreVerdict, timeAgo } from "@/lib/utils";
 
 interface IdeaDetailProps {
@@ -146,13 +146,12 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
   const router = useRouter();
   const updateIdea = useIdeaStore((s) => s.updateIdea);
   const removeIdea = useIdeaStore((s) => s.removeIdea);
-  const setDocumentMode = useUIStore((s) => s.setDocumentMode);
   const setHideTopBar = useUIStore((s) => s.setHideTopBar);
   const [activeTab, setActiveTab] = useState("overview");
   const [editing, setEditing] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [documentModalOpen, setDocumentModalOpen] = useState(false);
 
-  const isDocumentMode = activeTab === "document";
   const showContinuations = idea.status === "filed" || idea.status === "scored";
 
   // Hide TopBar on mount (back button replaces it), restore on unmount
@@ -161,11 +160,14 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
     return () => setHideTopBar(false);
   }, [setHideTopBar]);
 
-  // Toggle document mode based on active tab
-  useEffect(() => {
-    setDocumentMode(isDocumentMode);
-    return () => setDocumentMode(false);
-  }, [isDocumentMode, setDocumentMode]);
+  // Intercept tab change: "document" opens modal instead of switching tabs
+  const handleTabChange = useCallback((tabId: string) => {
+    if (tabId === "document") {
+      setDocumentModalOpen(true);
+    } else {
+      setActiveTab(tabId);
+    }
+  }, []);
 
   // Compute tab statuses
   const detailTabs = useMemo(() => {
@@ -228,7 +230,7 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
   return (
     <div className="flex flex-col h-full">
       {/* ── STICKY HEADER ── */}
-      <div className={`shrink-0 ${isDocumentMode ? "bg-white border-b border-border px-6 pt-4" : "bg-neutral-off-white"}`}>
+      <div className="shrink-0 bg-neutral-off-white">
         {/* Back button */}
         <Link
           href="/ideas"
@@ -260,17 +262,13 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
                 {idea.status}
               </Badge>
               <span className="text-xs text-text-muted">{timeAgo(idea.updatedAt)}</span>
-              {!isDocumentMode && (
-                <CompletionPill idea={idea} onStageClick={handleStageClick} />
-              )}
+              <CompletionPill idea={idea} onStageClick={handleStageClick} />
             </div>
           </div>
           <div className="flex items-center gap-1.5 ml-4 shrink-0">
-            {!isDocumentMode && (
-              <Button variant="ghost" size="sm" onClick={() => setEditing(!editing)}>
-                {editing ? "Done" : "Edit"}
-              </Button>
-            )}
+            <Button variant="ghost" size="sm" onClick={() => setEditing(!editing)}>
+              {editing ? "Done" : "Edit"}
+            </Button>
             <OverflowMenu
               ideaId={idea.id}
               ideaTitle={idea.title}
@@ -281,21 +279,19 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
         </div>
 
         {/* Next Step Banner (hidden in document mode) */}
-        {!isDocumentMode && (
-          <NextStepBanner
-            idea={idea}
-            onNavigate={handleStageClick}
-            onAction={handleNextAction}
-          />
-        )}
+        <NextStepBanner
+          idea={idea}
+          onNavigate={handleStageClick}
+          onAction={handleNextAction}
+        />
 
         {/* Tab Bar */}
-        <TabBar tabs={detailTabs} activeTab={activeTab} onChange={setActiveTab} />
+        <TabBar tabs={detailTabs} activeTab={activeTab} onChange={handleTabChange} />
       </div>
 
       {/* ── SCROLLABLE CONTENT ── */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className={`flex flex-col lg:flex-row ${isDocumentMode ? "" : "gap-6 mt-4"}`}>
+        <div className="flex flex-col lg:flex-row gap-6 mt-4">
           {/* Left: tab content */}
           <div className="flex-1 min-w-0">
             <TabPanel id="overview" activeTab={activeTab}>
@@ -313,9 +309,6 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
             <TabPanel id="red-team" activeTab={activeTab}>
               <RedTeamTab idea={idea} update={update} editing={editing} />
             </TabPanel>
-            <TabPanel id="document" activeTab={activeTab}>
-              <DocumentTab idea={idea} />
-            </TabPanel>
             <TabPanel id="prior-art" activeTab={activeTab}>
               <PriorArtTab idea={idea} update={update} />
             </TabPanel>
@@ -326,10 +319,8 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
             )}
           </div>
 
-          {/* Sidebar collapse toggle + Right sidebar (hidden in document mode) */}
-          {!isDocumentMode && (
-            <>
-              <button
+          {/* Sidebar collapse toggle + Right sidebar */}
+          <button
                 type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="hidden lg:flex items-center justify-center w-5 shrink-0 group"
@@ -471,10 +462,15 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
                   </SidebarSection>
                 </div>
               </div>
-            </>
-          )}
         </div>
       </div>
+
+      {/* ── Document Modal ── */}
+      <DocumentModal
+        open={documentModalOpen}
+        onClose={() => setDocumentModalOpen(false)}
+        idea={idea}
+      />
     </div>
   );
 }

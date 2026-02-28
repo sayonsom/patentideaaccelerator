@@ -164,8 +164,8 @@ export function DocumentTab({ idea }: DocumentTabProps) {
     <div
       className={`flex ${
         focusMode
-          ? "fixed inset-0 z-40 bg-white h-screen"
-          : "h-full min-h-[calc(100vh-14rem)]"
+          ? "absolute inset-0 z-10 bg-white"
+          : "h-full"
       }`}
     >
       {/* Left sidebar — document list (hidden in focus mode) */}

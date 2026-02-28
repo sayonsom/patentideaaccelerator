@@ -12,7 +12,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const initSettings = useSettingsStore((s) => s.init);
   const initPromptPrefs = useSettingsStore((s) => s.initPromptPrefs);
-  const documentMode = useUIStore((s) => s.documentMode);
   const hideTopBar = useUIStore((s) => s.hideTopBar);
 
   useEffect(() => {
@@ -33,15 +32,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const showSidebar = !documentMode;
-  const showTopBar = !documentMode && !hideTopBar;
-
   return (
     <div className="flex h-screen overflow-hidden bg-neutral-off-white">
-      {showSidebar && <Sidebar />}
+      <Sidebar />
       <div className="flex flex-col flex-1 min-w-0">
-        {showTopBar && <TopBar />}
-        <main className={`flex-1 ${documentMode ? "overflow-hidden p-0" : "overflow-y-auto p-6"}`}>
+        {!hideTopBar && <TopBar />}
+        <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>
       </div>
