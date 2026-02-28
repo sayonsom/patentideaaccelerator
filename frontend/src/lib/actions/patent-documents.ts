@@ -14,12 +14,19 @@ import type { PatentDocument as PrismaPatentDocument } from "@prisma/client";
 // ─── Prisma ↔ App Type Mappers ──────────────────────────────────
 
 function mapPrismaToPatentDocument(row: PrismaPatentDocument): PatentDocument {
+  // Prisma JSON fields can return objects with null prototypes (Object.create(null)),
+  // which Next.js Server Actions cannot serialize. Round-trip through JSON to ensure
+  // all nested objects have standard Object.prototype.
+  const safeContent = row.content
+    ? (JSON.parse(JSON.stringify(row.content)) as Record<string, unknown>)
+    : {};
+
   return {
     id: row.id,
     ideaId: row.ideaId,
     userId: row.userId,
     title: row.title,
-    content: (row.content as Record<string, unknown>) ?? {},
+    content: safeContent,
     status: row.status as DocumentStatus,
     documentType: row.documentType as DocumentType,
     templateId: row.templateId,

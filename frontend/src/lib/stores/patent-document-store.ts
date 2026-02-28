@@ -217,9 +217,12 @@ export const usePatentDocumentStore = create<PatentDocumentState>(
     ) => {
       set({ isLoading: true, error: null });
       try {
+        // Ensure content has no null-prototype objects (Prisma JSON fields
+        // can produce these, and Next.js Server Actions reject them).
+        const safeContent = JSON.parse(JSON.stringify(initialContent)) as Record<string, unknown>;
         const doc = await createPatentDocument(
           ideaId,
-          initialContent,
+          safeContent,
           title,
           documentType,
           templateId
@@ -267,9 +270,11 @@ export const usePatentDocumentStore = create<PatentDocumentState>(
         }, 0);
 
         // 1. Persist the content to the database
+        // Sanitize content to strip any null-prototype objects before sending to server action
+        const safeContent = JSON.parse(contentStr) as Record<string, unknown>;
         const updated = await updatePatentDocumentContent(
           document.id,
-          document.content,
+          safeContent,
           document.paragraphCounter,
           totalWords
         );
