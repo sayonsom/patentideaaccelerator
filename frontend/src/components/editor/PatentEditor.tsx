@@ -26,12 +26,14 @@ import {
 } from "@/components/editor/extensions";
 import { usePatentDocumentStore } from "@/lib/stores/patent-document-store";
 import { useDocumentAutoSave } from "@/hooks/useDocumentAutoSave";
+import { useDoubleShift } from "@/hooks/useDoubleShift";
 
 import { EditorToolbar } from "./EditorToolbar";
 import { EditorContent } from "./EditorContent";
 import { CommentSidebar } from "./CommentSidebar";
 import { VersionHistoryPanel } from "./VersionHistoryPanel";
 import { ImageInsertModal } from "./ImageInsertModal";
+import { InlinePromptBar } from "./InlinePromptBar";
 
 // ─── Props ──────────────────────────────────────────────────────────
 
@@ -57,6 +59,7 @@ export function PatentEditor({ documentId, initialContent }: PatentEditorProps) 
 
   // Local UI state
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [showInlinePrompt, setShowInlinePrompt] = useState(false);
 
   // ── Tiptap editor instance ──────────────────────────────────────
 
@@ -112,6 +115,16 @@ export function PatentEditor({ documentId, initialContent }: PatentEditorProps) 
     },
   });
 
+  // ── Double-shift to open inline prompt ────────────────────────
+  useDoubleShift(
+    () => {
+      if (editor?.isFocused) {
+        setShowInlinePrompt(true);
+      }
+    },
+    !showInlinePrompt // disable detection while prompt is already open
+  );
+
   // ── Callbacks ───────────────────────────────────────────────────
 
   const handleSave = useCallback(() => {
@@ -166,9 +179,6 @@ export function PatentEditor({ documentId, initialContent }: PatentEditorProps) 
 
   // ── Render ──────────────────────────────────────────────────────
 
-  // Suppress rendering until the document ID is available (defensive)
-  void documentId;
-
   return (
     <div className="flex flex-col h-full border border-border rounded-lg overflow-hidden bg-white">
       <EditorToolbar
@@ -182,6 +192,15 @@ export function PatentEditor({ documentId, initialContent }: PatentEditorProps) 
         isDirty={isDirty}
         lastSavedAt={lastSavedAt}
       />
+
+      {/* Inline AI prompt bar (triggered by double-shift) */}
+      {showInlinePrompt && editor && (
+        <InlinePromptBar
+          editor={editor}
+          documentId={documentId}
+          onClose={() => setShowInlinePrompt(false)}
+        />
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         <EditorContent editor={editor} />

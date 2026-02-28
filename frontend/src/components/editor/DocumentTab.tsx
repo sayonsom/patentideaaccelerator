@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { usePatentDocumentStore } from "@/lib/stores/patent-document-store";
 import { Spinner } from "@/components/ui";
 import { PatentEditor } from "./PatentEditor";
@@ -39,6 +39,8 @@ export function DocumentTab({ idea }: DocumentTabProps) {
   const reset = usePatentDocumentStore((s) => s.reset);
 
   const [newDocModalOpen, setNewDocModalOpen] = useState(false);
+  const [autoCreating, setAutoCreating] = useState(false);
+  const autoCreatedRef = useRef(false);
 
   // Load documents on mount, reset on unmount
   useEffect(() => {
@@ -47,6 +49,38 @@ export function DocumentTab({ idea }: DocumentTabProps) {
       reset();
     };
   }, [idea.id, loadDocuments, reset]);
+
+  // Auto-create first document from default template when documents are empty
+  // Only fires once per idea (tracked by autoCreatedRef) and only after the
+  // initial list load completes with zero results.
+  const hasLoadedOnce = useRef(false);
+  useEffect(() => {
+    if (isLoadingList) {
+      // Mark that a load is in progress — we'll check after it finishes
+      hasLoadedOnce.current = false;
+      return;
+    }
+    // Guard: only fire once, only when the first load returns zero documents
+    if (hasLoadedOnce.current || autoCreatedRef.current || documents.length > 0 || error) {
+      hasLoadedOnce.current = true;
+      return;
+    }
+    hasLoadedOnce.current = true;
+    autoCreatedRef.current = true;
+    setAutoCreating(true);
+
+    const defaultTemplate = DOCUMENT_TEMPLATES.find((t) => t.id === "uspto-utility") ?? DOCUMENT_TEMPLATES[0];
+    const { content } = buildContentFromTemplate(defaultTemplate, idea);
+    const title = `${defaultTemplate.name} — ${idea.title || "Untitled"}`;
+
+    initializeDocument(
+      idea.id,
+      content,
+      title,
+      defaultTemplate.documentType as DocumentType,
+      defaultTemplate.id
+    ).finally(() => setAutoCreating(false));
+  }, [isLoadingList, documents.length, error, idea, initializeDocument]);
 
   // Escape key to exit focus mode
   useEffect(() => {
@@ -82,10 +116,13 @@ export function DocumentTab({ idea }: DocumentTabProps) {
 
   // ── Loading ─────────────────────────────────────────────────────
 
-  if (isLoadingList || isLoading) {
+  if (isLoadingList || isLoading || autoCreating) {
     return (
-      <div className="flex items-center justify-center py-24">
+      <div className="flex items-center justify-center py-24 gap-3">
         <Spinner size="lg" />
+        {autoCreating && (
+          <p className="text-sm text-text-muted">Setting up your document...</p>
+        )}
       </div>
     );
   }
@@ -128,7 +165,7 @@ export function DocumentTab({ idea }: DocumentTabProps) {
       className={`flex ${
         focusMode
           ? "fixed inset-0 z-40 bg-white h-screen"
-          : "h-[calc(100vh-14rem)]"
+          : "h-full min-h-[calc(100vh-14rem)]"
       }`}
     >
       {/* Left sidebar — document list (hidden in focus mode) */}

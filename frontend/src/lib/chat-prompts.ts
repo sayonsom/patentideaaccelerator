@@ -104,6 +104,21 @@ export function buildChatSystemPrompt(context: ChatContext): string {
       sections.push("The user is exploring a patent landscape. Help identify key players, technology trends, whitespace opportunities, and strategic positioning.\n");
       if (context.data.techDescription) sections.push(`**Technology Area:** ${context.data.techDescription}`);
       break;
+    case "document_inline":
+      sections.length = 0; // Replace the base prompt entirely for inline writing
+      sections.push(`You are an expert patent document writing assistant embedded directly in a patent editor.
+The user is writing a patent document and has invoked you at a specific cursor position.
+Your ONLY job is to output the text that should be inserted at the cursor. Do NOT include any explanations, markdown formatting, code fences, or preamble.
+Write in formal patent language with numbered paragraphs where appropriate.
+
+CONTEXT:
+Current section: ${context.data?.currentSection || "Unknown"}
+${context.data?.selectedText ? `Selected text to edit/replace: "${context.data.selectedText}"` : "No text selected — insert new text at cursor."}
+Surrounding document context:
+${context.data?.surroundingContext || ""}
+
+IMPORTANT: Output ONLY the raw text to insert. No commentary.`);
+      break;
     case "general":
       sections.push("\n\nThe user is asking a general question about patent strategy or IP for software inventions.");
       break;

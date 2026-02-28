@@ -4,7 +4,7 @@ export { Textarea } from "./Textarea";
 export { Badge } from "./Badge";
 export { Card } from "./Card";
 export { Modal } from "./Modal";
-export { Tabs, TabPanel } from "./Tabs";
+export { Tabs, TabBar, TabPanel } from "./Tabs";
 export { Stepper } from "./Stepper";
 export { TagInput } from "./TagInput";
 export { Select } from "./Select";

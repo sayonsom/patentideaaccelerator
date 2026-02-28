@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Idea, IdeaScore, RedTeamResult, FrameworkType, PatentReport, ClaimDraft } from "@/lib/types";
-import { useIdeaStore } from "@/lib/store";
+import { useIdeaStore, useUIStore } from "@/lib/store";
 import { useAI } from "@/hooks/useAI";
 import { useDebouncedField } from "@/hooks/useDebouncedField";
 import { usePriorArt } from "@/hooks/usePriorArt";
-import { Button, Tabs, TabPanel, Input, Textarea, Badge, Card, TagInput, Modal, Spinner } from "@/components/ui";
+import { Button, TabBar, TabPanel, Input, Textarea, Badge, Card, TagInput, Modal, Spinner } from "@/components/ui";
 import { ScoreMatrix } from "./ScoreMatrix";
 import { AlignmentPanel } from "./AlignmentPanel";
 import { CompletionPill } from "./CompletionPill";
@@ -40,14 +40,14 @@ const STATUS_OPTIONS: { value: Idea["status"]; label: string }[] = [
   { value: "archived", label: "Archived" },
 ];
 
-const BASE_DETAIL_TABS: { id: string; label: string; status?: "complete" | "partial" | "empty" }[] = [
+const BASE_DETAIL_TABS: { id: string; label: string; status?: "complete" | "partial" | "empty"; align?: "right" }[] = [
   { id: "overview", label: "Overview" },
   { id: "framework", label: "Framework" },
   { id: "claims", label: "Claims" },
-  { id: "document", label: "Document" },
   { id: "patent-filing", label: "Patent Filing" },
   { id: "red-team", label: "Red Team" },
   { id: "prior-art", label: "Prior Art" },
+  { id: "document", label: "Document", align: "right" },
 ];
 
 const emptyClaimDraft: ClaimDraft = {
@@ -146,11 +146,26 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
   const router = useRouter();
   const updateIdea = useIdeaStore((s) => s.updateIdea);
   const removeIdea = useIdeaStore((s) => s.removeIdea);
+  const setDocumentMode = useUIStore((s) => s.setDocumentMode);
+  const setHideTopBar = useUIStore((s) => s.setHideTopBar);
   const [activeTab, setActiveTab] = useState("overview");
   const [editing, setEditing] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  const isDocumentMode = activeTab === "document";
   const showContinuations = idea.status === "filed" || idea.status === "scored";
+
+  // Hide TopBar on mount (back button replaces it), restore on unmount
+  useEffect(() => {
+    setHideTopBar(true);
+    return () => setHideTopBar(false);
+  }, [setHideTopBar]);
+
+  // Toggle document mode based on active tab
+  useEffect(() => {
+    setDocumentMode(isDocumentMode);
+    return () => setDocumentMode(false);
+  }, [isDocumentMode, setDocumentMode]);
 
   // Compute tab statuses
   const detailTabs = useMemo(() => {
@@ -190,7 +205,6 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
   }
 
   function handleNextAction(actionId: string) {
-    // For actions that map to tabs, navigate there
     const tabMap: Record<string, string> = {
       alice: "overview",
       claims: "claims",
@@ -212,10 +226,21 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
     : undefined;
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
-      {/* Left: main content */}
-      <div className="flex-1 min-w-0">
-        {/* ── Title Area ── */}
+    <div className="flex flex-col h-full">
+      {/* ── STICKY HEADER ── */}
+      <div className={`shrink-0 ${isDocumentMode ? "bg-white border-b border-border px-6 pt-4" : "bg-neutral-off-white"}`}>
+        {/* Back button */}
+        <Link
+          href="/ideas"
+          className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-ink transition-colors mb-3"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+          </svg>
+          Ideas
+        </Link>
+
+        {/* Title Area */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
             {editing ? (
@@ -235,13 +260,17 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
                 {idea.status}
               </Badge>
               <span className="text-xs text-text-muted">{timeAgo(idea.updatedAt)}</span>
-              <CompletionPill idea={idea} onStageClick={handleStageClick} />
+              {!isDocumentMode && (
+                <CompletionPill idea={idea} onStageClick={handleStageClick} />
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1.5 ml-4 shrink-0">
-            <Button variant="ghost" size="sm" onClick={() => setEditing(!editing)}>
-              {editing ? "Done" : "Edit"}
-            </Button>
+            {!isDocumentMode && (
+              <Button variant="ghost" size="sm" onClick={() => setEditing(!editing)}>
+                {editing ? "Done" : "Edit"}
+              </Button>
+            )}
             <OverflowMenu
               ideaId={idea.id}
               ideaTitle={idea.title}
@@ -251,186 +280,199 @@ export function IdeaDetail({ idea }: IdeaDetailProps) {
           </div>
         </div>
 
-        {/* ── Next Step Banner ── */}
-        <NextStepBanner
-          idea={idea}
-          onNavigate={handleStageClick}
-          onAction={handleNextAction}
-        />
+        {/* Next Step Banner (hidden in document mode) */}
+        {!isDocumentMode && (
+          <NextStepBanner
+            idea={idea}
+            onNavigate={handleStageClick}
+            onAction={handleNextAction}
+          />
+        )}
 
-        {/* ── Tabs ── */}
-        <Tabs tabs={detailTabs} activeTab={activeTab} onChange={setActiveTab}>
-          <TabPanel id="overview" activeTab={activeTab}>
-            <OverviewTab idea={idea} update={update} editing={editing} />
-          </TabPanel>
-          <TabPanel id="framework" activeTab={activeTab}>
-            <FrameworkTab idea={idea} update={update} />
-          </TabPanel>
-          <TabPanel id="claims" activeTab={activeTab}>
-            <ClaimsTab idea={idea} update={update} editing={editing} />
-          </TabPanel>
-          <TabPanel id="patent-filing" activeTab={activeTab}>
-            <PatentFilingTab idea={idea} update={update} />
-          </TabPanel>
-          <TabPanel id="red-team" activeTab={activeTab}>
-            <RedTeamTab idea={idea} update={update} editing={editing} />
-          </TabPanel>
-          <TabPanel id="document" activeTab={activeTab}>
-            <DocumentTab idea={idea} />
-          </TabPanel>
-          <TabPanel id="prior-art" activeTab={activeTab}>
-            <PriorArtTab idea={idea} update={update} />
-          </TabPanel>
-          {showContinuations && (
-            <TabPanel id="continuations" activeTab={activeTab}>
-              <ContinuationPanel idea={idea} />
-            </TabPanel>
-          )}
-        </Tabs>
+        {/* Tab Bar */}
+        <TabBar tabs={detailTabs} activeTab={activeTab} onChange={setActiveTab} />
       </div>
 
-      {/* ── Sidebar collapse toggle ── */}
-      <button
-        type="button"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="hidden lg:flex items-center justify-center w-5 shrink-0 group"
-        title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-      >
-        <div className="w-px h-full bg-border group-hover:bg-neutral-light transition-colors relative">
-          <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-8 flex items-center justify-center rounded bg-white border border-border group-hover:border-neutral-light opacity-0 group-hover:opacity-100 transition-opacity">
-            <svg
-              className={`w-3 h-3 text-text-muted transition-transform ${sidebarOpen ? "" : "rotate-180"}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
+      {/* ── SCROLLABLE CONTENT ── */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className={`flex flex-col lg:flex-row ${isDocumentMode ? "" : "gap-6 mt-4"}`}>
+          {/* Left: tab content */}
+          <div className="flex-1 min-w-0">
+            <TabPanel id="overview" activeTab={activeTab}>
+              <OverviewTab idea={idea} update={update} editing={editing} />
+            </TabPanel>
+            <TabPanel id="framework" activeTab={activeTab}>
+              <FrameworkTab idea={idea} update={update} />
+            </TabPanel>
+            <TabPanel id="claims" activeTab={activeTab}>
+              <ClaimsTab idea={idea} update={update} editing={editing} />
+            </TabPanel>
+            <TabPanel id="patent-filing" activeTab={activeTab}>
+              <PatentFilingTab idea={idea} update={update} />
+            </TabPanel>
+            <TabPanel id="red-team" activeTab={activeTab}>
+              <RedTeamTab idea={idea} update={update} editing={editing} />
+            </TabPanel>
+            <TabPanel id="document" activeTab={activeTab}>
+              <DocumentTab idea={idea} />
+            </TabPanel>
+            <TabPanel id="prior-art" activeTab={activeTab}>
+              <PriorArtTab idea={idea} update={update} />
+            </TabPanel>
+            {showContinuations && (
+              <TabPanel id="continuations" activeTab={activeTab}>
+                <ContinuationPanel idea={idea} />
+              </TabPanel>
+            )}
           </div>
-        </div>
-      </button>
 
-      {/* ── Right sidebar ── */}
-      <div
-        className={`shrink-0 transition-all duration-200 overflow-hidden ${
-          sidebarOpen ? "w-full lg:w-80" : "w-0 lg:w-0"
-        }`}
-      >
-        <div className="w-full lg:w-80 space-y-2">
-          {/* Scoring Section */}
-          <SidebarSection title="Scoring">
-            <Card>
-              <ScoreMatrix
-                score={idea.score}
-                onChange={(score: IdeaScore) => update({ score })}
-                compact
-              />
-              {idea.score && (
-                <div className="mt-3 pt-3 border-t border-border">
-                  <div
-                    className="text-sm font-normal"
-                    style={{ color: getScoreVerdict(getTotalScore(idea.score)).color }}
-                  >
-                    {getScoreVerdict(getTotalScore(idea.score)).label} ({getTotalScore(idea.score)}/9)
+          {/* Sidebar collapse toggle + Right sidebar (hidden in document mode) */}
+          {!isDocumentMode && (
+            <>
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="hidden lg:flex items-center justify-center w-5 shrink-0 group"
+                title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              >
+                <div className="w-px h-full bg-border group-hover:bg-neutral-light transition-colors relative">
+                  <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-8 flex items-center justify-center rounded bg-white border border-border group-hover:border-neutral-light opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg
+                      className={`w-3 h-3 text-text-muted transition-transform ${sidebarOpen ? "" : "rotate-180"}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </div>
-              )}
-            </Card>
+              </button>
 
-            {/* Alice score — compact bar mode */}
-            {idea.aliceScore ? (
-              <AliceScoreCompact score={idea.aliceScore} barColor={aliceBarColor!} />
-            ) : (
-              <AliceCheckButton idea={idea} update={update} />
-            )}
+              <div
+                className={`shrink-0 transition-all duration-200 overflow-hidden ${
+                  sidebarOpen ? "w-full lg:w-80" : "w-0 lg:w-0"
+                }`}
+              >
+                <div className="w-full lg:w-80 space-y-2">
+                  {/* Scoring Section */}
+                  <SidebarSection title="Scoring">
+                    <Card>
+                      <ScoreMatrix
+                        score={idea.score}
+                        onChange={(score: IdeaScore) => update({ score })}
+                        compact
+                      />
+                      {idea.score && (
+                        <div className="mt-3 pt-3 border-t border-border">
+                          <div
+                            className="text-sm font-normal"
+                            style={{ color: getScoreVerdict(getTotalScore(idea.score)).color }}
+                          >
+                            {getScoreVerdict(getTotalScore(idea.score)).label} ({getTotalScore(idea.score)}/9)
+                          </div>
+                        </div>
+                      )}
+                    </Card>
 
-            {/* Business Alignment */}
-            <AlignmentPanel idea={idea} />
-          </SidebarSection>
+                    {/* Alice score — compact bar mode */}
+                    {idea.aliceScore ? (
+                      <AliceScoreCompact score={idea.aliceScore} barColor={aliceBarColor!} />
+                    ) : (
+                      <AliceCheckButton idea={idea} update={update} />
+                    )}
 
-          {/* Properties Section */}
-          <SidebarSection title="Properties">
-            {/* Status */}
-            <Card>
-              <h3 className="text-sm font-medium text-ink mb-2">Status</h3>
-              <div className="flex flex-wrap gap-1.5">
-                {STATUS_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => update({ status: opt.value })}
-                    className={`px-2.5 py-1 rounded text-xs font-normal transition-colors ${
-                      idea.status === opt.value
-                        ? "bg-accent-light text-blue-ribbon"
-                        : "bg-white text-neutral-dark hover:text-ink"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+                    {/* Business Alignment */}
+                    <AlignmentPanel idea={idea} />
+                  </SidebarSection>
+
+                  {/* Properties Section */}
+                  <SidebarSection title="Properties">
+                    {/* Status */}
+                    <Card>
+                      <h3 className="text-sm font-medium text-ink mb-2">Status</h3>
+                      <div className="flex flex-wrap gap-1.5">
+                        {STATUS_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            onClick={() => update({ status: opt.value })}
+                            className={`px-2.5 py-1 rounded text-xs font-normal transition-colors ${
+                              idea.status === opt.value
+                                ? "bg-accent-light text-blue-ribbon"
+                                : "bg-white text-neutral-dark hover:text-ink"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </Card>
+
+                    {/* Tags */}
+                    <Card>
+                      <h3 className="text-sm font-medium text-ink mb-2">Tags</h3>
+                      <TagInput
+                        tags={idea.tags}
+                        onChange={(tags) => update({ tags })}
+                        placeholder="Add tags..."
+                      />
+                    </Card>
+                  </SidebarSection>
+
+                  {/* Metadata Section */}
+                  <SidebarSection title="Metadata" defaultOpen={false}>
+                    {/* Sprint Association */}
+                    {idea.sprintId && (
+                      <Card>
+                        <h3 className="text-sm font-medium text-ink mb-2">Sprint</h3>
+                        <div className="flex items-center justify-between">
+                          <Link
+                            href={`/sprints/${idea.sprintId}`}
+                            className="inline-flex items-center gap-1.5 text-xs text-blue-ribbon hover:underline"
+                          >
+                            <span>&#9651;</span>
+                            View Sprint
+                          </Link>
+                          <button
+                            onClick={async () => {
+                              const { unlinkFromSprint } = await import("@/lib/api");
+                              await unlinkFromSprint(idea.id);
+                              update({ sprintId: null });
+                            }}
+                            className="text-[11px] text-text-muted hover:text-red-500 transition-colors"
+                          >
+                            Remove from Sprint
+                          </button>
+                        </div>
+                      </Card>
+                    )}
+
+                    <Card>
+                      <dl className="space-y-1.5 text-xs">
+                        <div className="flex justify-between">
+                          <dt className="text-text-muted">Created</dt>
+                          <dd className="text-neutral-dark">{timeAgo(idea.createdAt)}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-text-muted">Framework</dt>
+                          <dd className="text-neutral-dark">{idea.frameworkUsed === "none" ? "Freeform" : idea.frameworkUsed.toUpperCase()}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-text-muted">Phase</dt>
+                          <dd className="text-neutral-dark capitalize">{idea.phase}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-text-muted">ID</dt>
+                          <dd className="text-text-muted font-mono">{idea.id.slice(0, 8)}</dd>
+                        </div>
+                      </dl>
+                    </Card>
+                  </SidebarSection>
+                </div>
               </div>
-            </Card>
-
-            {/* Tags */}
-            <Card>
-              <h3 className="text-sm font-medium text-ink mb-2">Tags</h3>
-              <TagInput
-                tags={idea.tags}
-                onChange={(tags) => update({ tags })}
-                placeholder="Add tags..."
-              />
-            </Card>
-          </SidebarSection>
-
-          {/* Metadata Section */}
-          <SidebarSection title="Metadata" defaultOpen={false}>
-            {/* Sprint Association */}
-            {idea.sprintId && (
-              <Card>
-                <h3 className="text-sm font-medium text-ink mb-2">Sprint</h3>
-                <div className="flex items-center justify-between">
-                  <Link
-                    href={`/sprints/${idea.sprintId}`}
-                    className="inline-flex items-center gap-1.5 text-xs text-blue-ribbon hover:underline"
-                  >
-                    <span>&#9651;</span>
-                    View Sprint
-                  </Link>
-                  <button
-                    onClick={async () => {
-                      const { unlinkFromSprint } = await import("@/lib/api");
-                      await unlinkFromSprint(idea.id);
-                      update({ sprintId: null });
-                    }}
-                    className="text-[11px] text-text-muted hover:text-red-500 transition-colors"
-                  >
-                    Remove from Sprint
-                  </button>
-                </div>
-              </Card>
-            )}
-
-            <Card>
-              <dl className="space-y-1.5 text-xs">
-                <div className="flex justify-between">
-                  <dt className="text-text-muted">Created</dt>
-                  <dd className="text-neutral-dark">{timeAgo(idea.createdAt)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-text-muted">Framework</dt>
-                  <dd className="text-neutral-dark">{idea.frameworkUsed === "none" ? "Freeform" : idea.frameworkUsed.toUpperCase()}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-text-muted">Phase</dt>
-                  <dd className="text-neutral-dark capitalize">{idea.phase}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-text-muted">ID</dt>
-                  <dd className="text-text-muted font-mono">{idea.id.slice(0, 8)}</dd>
-                </div>
-              </dl>
-            </Card>
-          </SidebarSection>
+            </>
+          )}
         </div>
       </div>
     </div>

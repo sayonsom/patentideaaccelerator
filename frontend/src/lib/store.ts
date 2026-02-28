@@ -136,10 +136,14 @@ export const useIdeaStore = create<IdeaState>((set, get) => ({
 
 interface UIState {
   sidebarCollapsed: boolean;
+  documentMode: boolean;
+  hideTopBar: boolean;
   activeModal: string | null;
   wizardStep: number;
 
   toggleSidebar: () => void;
+  setDocumentMode: (on: boolean) => void;
+  setHideTopBar: (hide: boolean) => void;
   openModal: (id: string) => void;
   closeModal: () => void;
   setWizardStep: (step: number) => void;
@@ -147,10 +151,14 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   sidebarCollapsed: false,
+  documentMode: false,
+  hideTopBar: false,
   activeModal: null,
   wizardStep: 0,
 
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+  setDocumentMode: (on) => set({ documentMode: on }),
+  setHideTopBar: (hide) => set({ hideTopBar: hide }),
   openModal: (id) => set({ activeModal: id }),
   closeModal: () => set({ activeModal: null }),
   setWizardStep: (step) => set({ wizardStep: step }),

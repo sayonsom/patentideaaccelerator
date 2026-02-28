@@ -684,7 +684,7 @@ export interface TeamCategoryBreakdown {
 // Chat-with-Context Types (Appendix A.2)
 // ═══════════════════════════════════════════════════════════════════
 
-export type ChatContextType = "idea" | "portfolio" | "prior-art" | "landscaping" | "general";
+export type ChatContextType = "idea" | "portfolio" | "prior-art" | "landscaping" | "general" | "document_inline";
 
 export interface ChatMessage {
   id: string;
